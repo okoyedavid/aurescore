@@ -15,6 +15,10 @@ import GoogleSignInButton from "./components/GoogleSignInButton";
 import OtpInput from "./components/OtpInput";
 import type { GoogleCallbackState } from "./google-callback";
 import { useResendLoginVerification, useVerifyLogin } from "./hooks";
+import {
+  clearOAuthInteraction,
+  takeOAuthContinuationUrl,
+} from "./oauth-interaction";
 
 const callbackErrorMessage =
   "Google sign-in could not be completed. Please try again.";
@@ -113,6 +117,11 @@ export default function GoogleAuthCallbackPage({
       hydrationPromise.current = (async () => {
         await hydrateAuthenticatedUser(queryClient);
         await invalidateAuthenticatedQueries(queryClient);
+        const continuation = takeOAuthContinuationUrl();
+        if (continuation) {
+          window.location.assign(continuation);
+          return;
+        }
         router.replace("/dashboard");
       })()
         .catch(() => {
@@ -180,7 +189,10 @@ export default function GoogleAuthCallbackPage({
     }
   }
 
-  if (state.kind === "failed") return <FailedCallback />;
+  if (state.kind === "failed") {
+    clearOAuthInteraction();
+    return <FailedCallback />;
+  }
 
   if (state.kind === "account-link-required") {
     return (

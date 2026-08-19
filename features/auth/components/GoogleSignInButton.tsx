@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { googleAuthUrl } from "../google";
+import { preserveOAuthInteractionFromLocation } from "../oauth-interaction";
 
 function GoogleMark() {
   return (
@@ -45,6 +46,7 @@ export default function GoogleSignInButton({
     if (starting.current) return;
     starting.current = true;
     setRedirecting(true);
+    preserveOAuthInteractionFromLocation();
     (navigate ?? ((url: string) => window.location.assign(url)))(googleAuthUrl);
   }
 

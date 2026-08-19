@@ -14,6 +14,7 @@ import AppShell from "./components/AppShell";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
+  useRouter: () => ({ replace: vi.fn() }),
 }));
 
 const user: AccountUser = {

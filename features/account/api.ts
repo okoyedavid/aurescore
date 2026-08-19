@@ -12,6 +12,10 @@ import type {
   UpdatePreferencesInput,
   UpdateProfileInput,
   UserSession,
+  OAuthGrant,
+  SecurityVerificationChallenge,
+  SecurityVerificationResult,
+  SensitiveAction,
 } from "./types";
 
 async function request<T>(operation: Promise<{ data: T }>) {
@@ -40,7 +44,11 @@ export const accountApi = {
     request<AccountPreferences>(apiClient.patch("/account/preferences", input)),
   changePassword: (input: ChangePasswordInput) =>
     request<MessageResponse>(apiClient.patch("/account/password", input)),
-  requestEmailChange: (input: { newEmail: string; currentPassword: string }) =>
+  requestEmailChange: (input: {
+    newEmail: string;
+    currentPassword?: string;
+    reauthToken?: string;
+  }) =>
     request<EmailChangeChallenge>(
       apiClient.post("/account/email-change/request", input),
     ),
@@ -66,5 +74,21 @@ export const accountApi = {
         signal: input.signal,
         params: { limit: input.limit, cursor: input.cursor },
       }),
+    ),
+  requestSecurityVerification: (action: SensitiveAction) =>
+    request<SecurityVerificationChallenge>(
+      apiClient.post("/account/security-verification/request", { action }),
+    ),
+  verifySecurityVerification: (input: { challengeId: string; code: string }) =>
+    request<SecurityVerificationResult>(
+      apiClient.post("/account/security-verification/verify", input),
+    ),
+  googleLink: () =>
+    request<{ url: string }>(apiClient.post("/auth/google/link")),
+  oauthGrants: (signal?: AbortSignal) =>
+    request<OAuthGrant[]>(apiClient.get("/account/oauth-grants", { signal })),
+  revokeOAuthGrant: (grantId: string) =>
+    request<MessageResponse>(
+      apiClient.delete(`/account/oauth-grants/${encodeURIComponent(grantId)}`),
     ),
 };

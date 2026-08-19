@@ -12,13 +12,19 @@ import {
   setPendingEmailChange,
   subscribePendingEmailChange,
 } from "../email-change-session";
-import { useConfirmEmailChange, useRequestEmailChange } from "../hooks";
+import {
+  useConfirmEmailChange,
+  useRequestEmailChange,
+  useRequestSecurityVerification,
+} from "../hooks";
 import type { AccountUser } from "../types";
 import { AsyncMessage, SettingsHeading, SettingsPanel } from "./shared";
+import SecurityVerificationDialog from "./SecurityVerificationDialog";
 
 export default function EmailSettings({ user }: { user: AccountUser }) {
   const requestChange = useRequestEmailChange();
   const confirmChange = useConfirmEmailChange();
+  const requestVerification = useRequestSecurityVerification();
   const requesting = useRef(false);
   const confirming = useRef(false);
   const snapshot = useSyncExternalStore(
@@ -32,6 +38,11 @@ export default function EmailSettings({ user }: { user: AccountUser }) {
   const [code, setCode] = useState("");
   const [localError, setLocalError] = useState("");
   const [success, setSuccess] = useState("");
+  const [challenge, setChallenge] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
+  const hasPassword = user.hasPassword !== false;
   const requestError = requestChange.isError
     ? normalizeApiError(requestChange.error)
     : null;
@@ -62,6 +73,15 @@ export default function EmailSettings({ user }: { user: AccountUser }) {
       return;
     }
 
+    setNewEmail(normalizedEmail);
+    if (!hasPassword) {
+      try {
+        const response = await requestVerification.mutateAsync("change-email");
+        setChallenge({ id: response.challengeId, message: response.message });
+      } catch {}
+      return;
+    }
+
     requesting.current = true;
     try {
       const response = await requestChange.mutateAsync({
@@ -74,6 +94,20 @@ export default function EmailSettings({ user }: { user: AccountUser }) {
       // The normalized mutation error is rendered below.
     } finally {
       requesting.current = false;
+    }
+  }
+
+  async function requestWithProvider(reauthToken: string) {
+    try {
+      const response = await requestChange.mutateAsync({
+        newEmail,
+        reauthToken,
+      });
+      setPendingEmailChange(response.challengeId, newEmail);
+      setChallenge(null);
+    } catch (error) {
+      setChallenge(null);
+      throw error;
     }
   }
 
@@ -194,36 +228,38 @@ export default function EmailSettings({ user }: { user: AccountUser }) {
             </span>
           )}
         </label>
-        <label
-          htmlFor="email-change-password"
-          className="block text-sm font-semibold"
-        >
-          Current password
-          <Input
-            id="email-change-password"
-            type="password"
-            value={currentPassword}
-            onChange={(event) => {
-              setCurrentPassword(event.target.value.slice(0, 128));
-              requestChange.reset();
-            }}
-            maxLength={128}
-            autoComplete="current-password"
-            aria-invalid={Boolean(requestPasswordError)}
-            aria-describedby={
-              requestPasswordError ? "email-change-password-error" : undefined
-            }
-            className="mt-2"
-          />
-          {requestPasswordError && (
-            <span
-              id="email-change-password-error"
-              className="mt-2 block text-xs text-red-500"
-            >
-              {requestPasswordError}
-            </span>
-          )}
-        </label>
+        {hasPassword && (
+          <label
+            htmlFor="email-change-password"
+            className="block text-sm font-semibold"
+          >
+            Current password
+            <Input
+              id="email-change-password"
+              type="password"
+              value={currentPassword}
+              onChange={(event) => {
+                setCurrentPassword(event.target.value.slice(0, 128));
+                requestChange.reset();
+              }}
+              maxLength={128}
+              autoComplete="current-password"
+              aria-invalid={Boolean(requestPasswordError)}
+              aria-describedby={
+                requestPasswordError ? "email-change-password-error" : undefined
+              }
+              className="mt-2"
+            />
+            {requestPasswordError && (
+              <span
+                id="email-change-password-error"
+                className="mt-2 block text-xs text-red-500"
+              >
+                {requestPasswordError}
+              </span>
+            )}
+          </label>
+        )}
         <AsyncMessage
           error={
             localError ||
@@ -235,11 +271,36 @@ export default function EmailSettings({ user }: { user: AccountUser }) {
         />
         <Button
           type="submit"
-          disabled={requestChange.isPending || !newEmail || !currentPassword}
+          disabled={
+            requestChange.isPending ||
+            requestVerification.isPending ||
+            !newEmail ||
+            (hasPassword && !currentPassword)
+          }
         >
           {requestChange.isPending ? "Sending code…" : "Send confirmation code"}
         </Button>
       </form>
+      <div className="mt-4">
+        <AsyncMessage
+          error={
+            requestVerification.isError
+              ? getApiErrorMessage(requestVerification.error)
+              : ""
+          }
+        />
+      </div>
+      <SecurityVerificationDialog
+        challengeId={challenge?.id ?? null}
+        message={challenge?.message}
+        title="Confirm before changing your email"
+        operationPending={requestChange.isPending}
+        operationError={
+          requestChange.isError ? getApiErrorMessage(requestChange.error) : ""
+        }
+        onClose={() => setChallenge(null)}
+        onVerified={requestWithProvider}
+      />
     </SettingsPanel>
   );
 }

@@ -8,6 +8,7 @@ import {
   MonitorCog,
   ShieldCheck,
   UserRound,
+  PlugZap,
 } from "lucide-react";
 import { useState } from "react";
 import AppShell from "@/features/app-shell/components/AppShell";
@@ -18,6 +19,7 @@ import PreferencesSettings from "@/features/account/components/PreferencesSettin
 import ProfileSettings from "@/features/account/components/ProfileSettings";
 import SecuritySettings from "@/features/account/components/SecuritySettings";
 import SessionsSettings from "@/features/account/components/SessionsSettings";
+import ConnectedApplications from "@/features/account/components/ConnectedApplications";
 import { SettingsSkeleton } from "@/features/account/components/shared";
 import { useCurrentUser } from "@/features/account/hooks";
 
@@ -28,13 +30,18 @@ const sections = [
   { id: "password", label: "Password", icon: KeyRound },
   { id: "email", label: "Email address", icon: Mail },
   { id: "sessions", label: "Sessions and devices", icon: MonitorCog },
+  { id: "connected-apps", label: "Connected applications", icon: PlugZap },
   { id: "activity", label: "Account activity", icon: Activity },
 ] as const;
 
 type Section = (typeof sections)[number]["id"];
 
-export default function AccountSettingsPage() {
-  const [active, setActive] = useState<Section>("profile");
+export default function AccountSettingsPage({
+  initialSection = "profile",
+}: {
+  initialSection?: Section;
+}) {
+  const [active, setActive] = useState<Section>(initialSection);
   const currentUser = useCurrentUser();
   const user = currentUser.data;
 
@@ -93,9 +100,10 @@ export default function AccountSettingsPage() {
                   <PreferencesSettings user={user} />
                 )}
                 {active === "security" && <SecuritySettings user={user} />}
-                {active === "password" && <PasswordSettings />}
+                {active === "password" && <PasswordSettings user={user} />}
                 {active === "email" && <EmailSettings user={user} />}
                 {active === "sessions" && <SessionsSettings />}
+                {active === "connected-apps" && <ConnectedApplications />}
                 {active === "activity" && <AuditHistory />}
               </>
             )}

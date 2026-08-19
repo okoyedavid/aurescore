@@ -35,8 +35,10 @@ const excludedAuthPaths = [
   "/auth/register",
   "/auth/refresh",
   "/auth/google",
+  "/auth/logout",
   "/auth/email-verification/",
   "/auth/login-verification/",
+  "/auth/password-reset/",
 ];
 
 function requestPath(config: InternalAxiosRequestConfig) {

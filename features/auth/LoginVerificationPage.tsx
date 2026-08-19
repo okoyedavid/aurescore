@@ -24,6 +24,7 @@ import {
   getPendingReturnTo,
 } from "./session";
 import { useResendCooldown } from "./useResendCooldown";
+import { takeOAuthContinuationUrl } from "./oauth-interaction";
 
 export default function LoginVerificationPage() {
   const router = useRouter();
@@ -71,6 +72,11 @@ export default function LoginVerificationPage() {
       resetAuthFailureRedirect();
       cacheAuthenticatedUser(queryClient, response.user);
       await invalidateAuthenticatedQueries(queryClient);
+      const continuation = takeOAuthContinuationUrl();
+      if (continuation) {
+        window.location.assign(continuation);
+        return;
+      }
       router.replace(returnTo);
     } catch {
       // The normalized mutation error is rendered below.

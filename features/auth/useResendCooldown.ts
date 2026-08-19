@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getCooldownSeconds, restartCooldown } from "./session";
 
-export function useResendCooldown(kind: "email" | "login") {
+export function useResendCooldown(kind: "email" | "login" | "password-reset") {
   const [seconds, setSeconds] = useState(60);
 
   useEffect(() => {

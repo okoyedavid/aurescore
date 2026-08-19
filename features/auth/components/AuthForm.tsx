@@ -27,6 +27,10 @@ import {
   setPendingChallenge,
   setPendingEmail,
 } from "../session";
+import {
+  preserveOAuthInteractionFromLocation,
+  takeOAuthContinuationUrl,
+} from "../oauth-interaction";
 
 export default function AuthForm({ mode }: { mode: "register" | "sign-in" }) {
   const router = useRouter();
@@ -75,11 +79,13 @@ export default function AuthForm({ mode }: { mode: "register" | "sign-in" }) {
     }
 
     const returnTo = getReturnToFromLocation();
+    const oauthInteraction = preserveOAuthInteractionFromLocation();
     clearPendingChallenge();
     submitting.current = true;
     try {
       const response = await login.mutateAsync({ email, password });
       if (response.requiresTwoFactor === true) {
+        if (oauthInteraction) preserveOAuthInteractionFromLocation();
         setPendingChallenge(response.challengeId, returnTo);
         router.push("/login-verification");
         return;
@@ -88,6 +94,11 @@ export default function AuthForm({ mode }: { mode: "register" | "sign-in" }) {
       resetAuthFailureRedirect();
       cacheAuthenticatedUser(queryClient, response.user);
       await invalidateAuthenticatedQueries(queryClient);
+      const continuation = takeOAuthContinuationUrl();
+      if (continuation) {
+        window.location.assign(continuation);
+        return;
+      }
       router.replace(returnTo);
     } catch (error) {
       if (isEmailVerificationRequired(error)) {
@@ -159,8 +170,19 @@ export default function AuthForm({ mode }: { mode: "register" | "sign-in" }) {
             </span>
           )}
         </label>
-        <label htmlFor="password" className="block text-sm font-semibold">
-          Password
+        <div className="block text-sm font-semibold">
+          <span className="flex items-center justify-between">
+            <label htmlFor="password">Password</label>
+            {!registering && (
+              <Link
+                href="/forgot-password"
+                onClick={() => preserveOAuthInteractionFromLocation()}
+                className="focus-ring rounded text-xs font-semibold text-blue-700"
+              >
+                Forgot password?
+              </Link>
+            )}
+          </span>
           <span className="relative mt-2 block">
             <Input
               id="password"
@@ -187,7 +209,7 @@ export default function AuthForm({ mode }: { mode: "register" | "sign-in" }) {
               )}
             </button>
           </span>
-        </label>
+        </div>
         {registering && (
           <label
             htmlFor="confirm-password"

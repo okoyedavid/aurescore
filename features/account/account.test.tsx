@@ -43,6 +43,8 @@ const user: AccountUser = {
   emailVerifiedAt: "2026-08-18T10:00:00.000Z",
   createdAt: "2026-08-17T10:00:00.000Z",
   updatedAt: "2026-08-18T10:00:00.000Z",
+  hasPassword: true,
+  authProviders: [],
   preferences: { desktopNotifications: true, twoFactorEnabled: false },
 };
 

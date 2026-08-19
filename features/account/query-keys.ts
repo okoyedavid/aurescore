@@ -5,4 +5,5 @@ export const accountKeys = {
   auditRoot: ["account", "audit-events"] as const,
   auditEvents: (filters: { limit: number }) =>
     ["account", "audit-events", filters] as const,
+  oauthGrants: ["oauth-grants"] as const,
 };

@@ -14,6 +14,7 @@ import {
   settingsByArea,
 } from "../navigation";
 import UserAvatar from "./UserAvatar";
+import LogoutButton from "@/features/auth/components/LogoutButton";
 
 function NavigationLink({
   item,
@@ -130,7 +131,9 @@ export default function AppSidebar({
               ? "Your account"
               : area === "institution"
                 ? "Institution tools"
-                : "Workspace tools"}
+                : area === "workspace"
+                  ? "Workspace tools"
+                  : "Developer tools"}
           </p>
         )}
         <nav
@@ -194,6 +197,13 @@ export default function AppSidebar({
                 <UserRound size={17} />
                 Account settings
               </Link>
+              <LogoutButton
+                onComplete={() => {
+                  setProfileOpen(false);
+                  close?.();
+                }}
+                className="focus-ring flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm text-red-500 hover:bg-[var(--app-hover)]"
+              />
               <Link
                 href="/dashboard/settings"
                 role="menuitem"

@@ -8,6 +8,10 @@ import type {
   RegisterInput,
   VerifyEmailInput,
   VerifyLoginInput,
+  PasswordResetConfirmInput,
+  PasswordResetRequestInput,
+  PasswordResetRequestResponse,
+  LogoutResponse,
 } from "./types";
 
 async function request<T>(operation: Promise<{ data: T }>) {
@@ -45,4 +49,19 @@ export const authApi = {
         { signal },
       ),
     ),
+  requestPasswordReset: (
+    input: PasswordResetRequestInput,
+    signal?: AbortSignal,
+  ) =>
+    request<PasswordResetRequestResponse>(
+      apiClient.post("/auth/password-reset/request", input, { signal }),
+    ),
+  confirmPasswordReset: (
+    input: PasswordResetConfirmInput,
+    signal?: AbortSignal,
+  ) =>
+    request<MessageResponse>(
+      apiClient.post("/auth/password-reset/confirm", input, { signal }),
+    ),
+  logout: () => request<LogoutResponse>(apiClient.post("/auth/logout")),
 };

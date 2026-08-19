@@ -9,12 +9,14 @@ export function Dialog({
   description,
   children,
   onClose,
+  dismissible = true,
 }: {
   open: boolean;
   title: string;
   description?: string;
   children: React.ReactNode;
   onClose: () => void;
+  dismissible?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
 
@@ -30,7 +32,7 @@ export function Dialog({
     focusable()[0]?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && dismissible) onClose();
       if (event.key !== "Tab") return;
       const items = focusable();
       if (!items.length) return;
@@ -50,17 +52,19 @@ export function Dialog({
       document.removeEventListener("keydown", onKeyDown);
       previous?.focus();
     };
-  }, [onClose, open]);
+  }, [dismissible, onClose, open]);
 
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center px-4 py-8">
-      <button
-        type="button"
-        aria-label="Close dialog"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/65"
-      />
+      {dismissible && (
+        <button
+          type="button"
+          aria-label="Close dialog"
+          onClick={onClose}
+          className="absolute inset-0 bg-black/65"
+        />
+      )}
       <div
         ref={panel}
         role="dialog"
@@ -69,14 +73,16 @@ export function Dialog({
         aria-describedby={description ? "dialog-description" : undefined}
         className="app-panel relative z-10 max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-[var(--app-border)] p-6 shadow-2xl"
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="app-icon-button absolute right-4 top-4"
-        >
-          <X size={18} />
-        </button>
+        {dismissible && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="app-icon-button absolute right-4 top-4"
+          >
+            <X size={18} />
+          </button>
+        )}
         <h2
           id="dialog-title"
           className="pr-10 font-display text-2xl font-semibold"

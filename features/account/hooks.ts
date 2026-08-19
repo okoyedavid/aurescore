@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 import {
   useInfiniteQuery,
   useMutation,
@@ -9,7 +11,11 @@ import {
 import { normalizeApiError } from "@/lib/api/errors";
 import { accountApi } from "./api";
 import { accountKeys } from "./query-keys";
-import type { AccountUser } from "./types";
+import type {
+  AccountUser,
+  ChangePasswordInput,
+  UpdatePreferencesInput,
+} from "./types";
 
 export function useCurrentUser() {
   return useQuery({
@@ -25,39 +31,94 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: accountApi.updateProfile,
-    onSuccess: (user) => queryClient.setQueryData(accountKeys.me, user),
+    onSuccess: (user) =>
+      queryClient.setQueryData<AccountUser | null>(accountKeys.me, (current) =>
+        current ? { ...current, ...user } : user,
+      ),
   });
 }
 
 export function useUpdatePreferences() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: accountApi.updatePreferences,
+  const input = useRef<UpdatePreferencesInput | null>(null);
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!input.current) throw new Error("Missing preference update.");
+      return accountApi.updatePreferences(input.current);
+    },
+    retry: false,
     onSuccess: (preferences) => {
       queryClient.setQueryData<AccountUser | null>(accountKeys.me, (current) =>
         current ? { ...current, preferences } : current,
       );
     },
+    onSettled: () => {
+      input.current = null;
+    },
   });
+  return {
+    ...mutation,
+    mutateAsync: (value: UpdatePreferencesInput) => {
+      input.current = value;
+      return mutation.mutateAsync();
+    },
+  };
 }
 
 export function useChangePassword() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: accountApi.changePassword,
+  const input = useRef<ChangePasswordInput | null>(null);
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!input.current) throw new Error("Missing password update.");
+      return accountApi.changePassword(input.current);
+    },
+    retry: false,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: accountKeys.sessions }),
+    onSettled: () => {
+      input.current = null;
+    },
   });
+  return {
+    ...mutation,
+    mutateAsync: (value: ChangePasswordInput) => {
+      input.current = value;
+      return mutation.mutateAsync();
+    },
+  };
 }
 
 export function useRequestEmailChange() {
-  return useMutation({ mutationFn: accountApi.requestEmailChange });
+  const input = useRef<
+    Parameters<typeof accountApi.requestEmailChange>[0] | null
+  >(null);
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!input.current) throw new Error("Missing email update.");
+      return accountApi.requestEmailChange(input.current);
+    },
+    retry: false,
+    onSettled: () => {
+      input.current = null;
+    },
+  });
+  return {
+    ...mutation,
+    mutateAsync: (
+      value: Parameters<typeof accountApi.requestEmailChange>[0],
+    ) => {
+      input.current = value;
+      return mutation.mutateAsync();
+    },
+  };
 }
 
 export function useConfirmEmailChange() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: accountApi.confirmEmailChange,
+    retry: false,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: accountKeys.sessions });
       try {
@@ -70,6 +131,52 @@ export function useConfirmEmailChange() {
         await queryClient.invalidateQueries({ queryKey: accountKeys.me });
       }
     },
+  });
+}
+
+export function useRequestSecurityVerification() {
+  return useMutation({
+    mutationFn: accountApi.requestSecurityVerification,
+    retry: false,
+  });
+}
+
+export function useVerifySecurityVerification(
+  challengeId: string | null,
+  code: string,
+  onVerified: (reauthToken: string) => Promise<void>,
+) {
+  return useMutation({
+    mutationFn: async () => {
+      if (!challengeId) throw new Error("Missing security challenge.");
+      const { reauthToken, expiresIn } =
+        await accountApi.verifySecurityVerification({ challengeId, code });
+      await onVerified(reauthToken);
+      return { expiresIn };
+    },
+    retry: false,
+  });
+}
+
+export function useLinkGoogle() {
+  return useMutation({ mutationFn: accountApi.googleLink, retry: false });
+}
+
+export function useOAuthGrants() {
+  return useQuery({
+    queryKey: accountKeys.oauthGrants,
+    queryFn: ({ signal }) => accountApi.oauthGrants(signal),
+    meta: { requiresAuth: true },
+  });
+}
+
+export function useRevokeOAuthGrant() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: accountApi.revokeOAuthGrant,
+    retry: false,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: accountKeys.oauthGrants }),
   });
 }
 

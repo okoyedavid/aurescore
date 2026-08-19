@@ -5,6 +5,9 @@ const keys = {
   challenge: "aurescore.pending-login-challenge",
   challengeSentAt: "aurescore.pending-login-sent-at",
   returnTo: "aurescore.pending-return-to",
+  passwordResetEmail: "aurescore.pending-password-reset-email",
+  passwordResetChallenge: "aurescore.pending-password-reset-challenge",
+  passwordResetSentAt: "aurescore.pending-password-reset-sent-at",
 } as const;
 
 function storage() {
@@ -88,15 +91,51 @@ export function clearChallengeOnly() {
   storage()?.removeItem(keys.challengeSentAt);
 }
 
-export function getCooldownSeconds(kind: "email" | "login") {
-  const key = kind === "email" ? keys.emailSentAt : keys.challengeSentAt;
+export function getCooldownSeconds(kind: "email" | "login" | "password-reset") {
+  const key =
+    kind === "email"
+      ? keys.emailSentAt
+      : kind === "login"
+        ? keys.challengeSentAt
+        : keys.passwordResetSentAt;
   const sentAt = Number(storage()?.getItem(key) ?? 0);
   return Math.max(0, 60 - Math.floor((Date.now() - sentAt) / 1000));
 }
 
-export function restartCooldown(kind: "email" | "login") {
+export function restartCooldown(kind: "email" | "login" | "password-reset") {
   storage()?.setItem(
-    kind === "email" ? keys.emailSentAt : keys.challengeSentAt,
+    kind === "email"
+      ? keys.emailSentAt
+      : kind === "login"
+        ? keys.challengeSentAt
+        : keys.passwordResetSentAt,
     String(Date.now()),
   );
+}
+
+export function setPasswordResetState(email: string, challengeId: string) {
+  storage()?.setItem(keys.passwordResetEmail, normalizeEmail(email));
+  storage()?.setItem(keys.passwordResetChallenge, challengeId);
+  storage()?.setItem(keys.passwordResetSentAt, String(Date.now()));
+}
+
+export function getPasswordResetState() {
+  const email = storage()?.getItem(keys.passwordResetEmail) ?? "";
+  const challengeId = storage()?.getItem(keys.passwordResetChallenge) ?? "";
+  if (!email || !challengeId || challengeId.length > 2048) {
+    clearPasswordResetState();
+    return null;
+  }
+  return { email: normalizeEmail(email), challengeId };
+}
+
+export function getPasswordResetSnapshot() {
+  const state = getPasswordResetState();
+  return state ? JSON.stringify(state) : "";
+}
+
+export function clearPasswordResetState() {
+  storage()?.removeItem(keys.passwordResetEmail);
+  storage()?.removeItem(keys.passwordResetChallenge);
+  storage()?.removeItem(keys.passwordResetSentAt);
 }

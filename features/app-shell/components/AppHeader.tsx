@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuthUser } from "@/features/auth/hooks";
 import { useAppShell } from "../AppShellContext";
 import UserAvatar from "./UserAvatar";
+import LogoutButton from "@/features/auth/components/LogoutButton";
 
 export default function AppHeader({ openMenu }: { openMenu: () => void }) {
   const { data: user } = useAuthUser();
@@ -137,6 +138,10 @@ export default function AppHeader({ openMenu }: { openMenu: () => void }) {
                   <UserRound size={17} />
                   Account settings
                 </Link>
+                <LogoutButton
+                  onComplete={() => setAccountMenuOpen(false)}
+                  className="focus-ring flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm text-red-500 hover:bg-[var(--app-hover)]"
+                />
               </div>
             </>
           )}

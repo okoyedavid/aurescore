@@ -20,3 +20,13 @@ export type RegisterInput = { email: string; name: string; password: string };
 export type LoginInput = { email: string; password: string };
 export type VerifyEmailInput = { email: string; code: string };
 export type VerifyLoginInput = { challengeId: string; code: string };
+export type PasswordResetRequestInput = { email: string };
+export type PasswordResetRequestResponse = MessageResponse & {
+  challengeId: string;
+};
+export type PasswordResetConfirmInput = {
+  challengeId: string;
+  code: string;
+  newPassword: string;
+};
+export type LogoutResponse = MessageResponse;

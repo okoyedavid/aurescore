@@ -15,6 +15,8 @@ export type AccountUser = {
   createdAt?: string;
   updatedAt?: string;
   preferences?: Partial<AccountPreferences> | null;
+  hasPassword?: boolean;
+  authProviders?: Array<{ provider: string; linkedAt: string }>;
 };
 
 export type UpdateProfileInput = Partial<{
@@ -26,11 +28,38 @@ export type UpdateProfileInput = Partial<{
 
 export type UpdatePreferencesInput = Partial<AccountPreferences> & {
   currentPassword?: string;
+  reauthToken?: string;
 };
 
 export type ChangePasswordInput = {
-  currentPassword: string;
+  currentPassword?: string;
+  reauthToken?: string;
   newPassword: string;
+};
+
+export type SensitiveAction =
+  | "set-password"
+  | "change-email"
+  | "change-two-factor";
+export type SecurityVerificationChallenge = MessageResponse & {
+  challengeId: string;
+};
+export type SecurityVerificationResult = {
+  reauthToken: string;
+  expiresIn: number;
+};
+
+export type OAuthGrant = {
+  grantId: string;
+  scopes: string[];
+  createdAt: string;
+  lastUsedAt: string | null;
+  client: {
+    clientId?: string;
+    name: string;
+    homepageUrl?: string | null;
+    logoUrl?: string | null;
+  };
 };
 
 export type EmailChangeChallenge = {

@@ -29,3 +29,21 @@ export function useVerifyLogin() {
 export function useResendLoginVerification() {
   return useMutation({ mutationFn: authApi.resendLoginVerification });
 }
+
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: authApi.requestPasswordReset,
+    retry: false,
+  });
+}
+
+export function useConfirmPasswordReset() {
+  return useMutation({
+    mutationFn: authApi.confirmPasswordReset,
+    retry: false,
+  });
+}
+
+export function useLogout() {
+  return useMutation({ mutationFn: authApi.logout, retry: false });
+}

@@ -8,6 +8,8 @@ const notices: Record<string, string> = {
     "Your login verification session is missing or has ended. Please sign in again.",
   "session-expired": "Your session has ended. Please sign in again.",
   "session-revoked": "This device was signed out successfully.",
+  "password-reset-complete":
+    "Your password was reset and previous sessions were signed out. Sign in with your new password.",
 };
 
 export default function AuthNotice() {
