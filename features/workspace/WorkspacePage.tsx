@@ -1,0 +1,12 @@
+import { BookOpenCheck, Calculator, Plus, Users } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import AppShell from "@/features/app-shell/components/AppShell";
+
+const sheets = [
+  { title: "Web Development Cohort", students: 32, updated: "Updated 12 min ago", progress: 78 },
+  { title: "Data Structures Practice", students: 18, updated: "Updated yesterday", progress: 100 },
+];
+
+export default function WorkspacePage() {
+  return <AppShell area="workspace"><div className="mx-auto max-w-[1300px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-500">Private workspace</p><h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">Personal score records</h1><p className="mt-2 text-sm text-[var(--app-muted)]">Record scores and calculate grades without an institution connection.</p></div><Button type="button"><Plus size={17}/>New score sheet</Button></div><section className="mt-8 grid gap-4 sm:grid-cols-3">{[{label:"Score sheets",value:"2",icon:BookOpenCheck},{label:"Learner records",value:"50",icon:Users},{label:"Completed sheets",value:"1",icon:Calculator}].map(({label,value,icon:Icon})=><article key={label} className="app-panel rounded-lg border border-[var(--app-border)] p-5"><Icon size={19} className="text-blue-500"/><p className="mt-5 text-xs text-[var(--app-muted)]">{label}</p><p className="mt-2 font-display text-3xl font-semibold">{value}</p></article>)}</section><section className="mt-7"><h2 className="font-display text-xl font-semibold">Recent score sheets</h2><div className="mt-4 grid gap-4 md:grid-cols-2">{sheets.map((sheet)=><article key={sheet.title} className="app-panel rounded-lg border border-[var(--app-border)] p-5"><div className="flex items-start justify-between"><div><h3 className="font-semibold">{sheet.title}</h3><p className="mt-1 text-xs text-[var(--app-muted)]">{sheet.students} records · {sheet.updated}</p></div><BookOpenCheck size={19} className="text-[var(--app-muted)]"/></div><div className="mt-6"><div className="flex justify-between text-xs"><span className="text-[var(--app-muted)]">Completion</span><span className="font-semibold">{sheet.progress}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--app-hover)]"><div className="h-full rounded-full bg-blue-600" style={{width:`${sheet.progress}%`}}/></div></div></article>)}</div></section></div></AppShell>;
+}
