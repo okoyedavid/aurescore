@@ -1,12 +1,116 @@
-import { BookOpenCheck, Calculator, Plus, Users } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import AppShell from "@/features/app-shell/components/AppShell";
+"use client";
 
-const sheets = [
-  { title: "Web Development Cohort", students: 32, updated: "Updated 12 min ago", progress: 78 },
-  { title: "Data Structures Practice", students: 18, updated: "Updated yesterday", progress: 100 },
-];
+import Link from "next/link";
+import { ArrowRight, FolderKanban, Plus } from "lucide-react";
+import { ButtonLink } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
+import AppShell from "@/features/app-shell/components/AppShell";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import { useWorkspaces } from "./hooks";
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
+}
 
 export default function WorkspacePage() {
-  return <AppShell area="workspace"><div className="mx-auto max-w-[1300px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10"><div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-500">Private workspace</p><h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">Personal score records</h1><p className="mt-2 text-sm text-[var(--app-muted)]">Record scores and calculate grades without an institution connection.</p></div><Button type="button"><Plus size={17}/>New score sheet</Button></div><section className="mt-8 grid gap-4 sm:grid-cols-3">{[{label:"Score sheets",value:"2",icon:BookOpenCheck},{label:"Learner records",value:"50",icon:Users},{label:"Completed sheets",value:"1",icon:Calculator}].map(({label,value,icon:Icon})=><article key={label} className="app-panel rounded-lg border border-[var(--app-border)] p-5"><Icon size={19} className="text-blue-500"/><p className="mt-5 text-xs text-[var(--app-muted)]">{label}</p><p className="mt-2 font-display text-3xl font-semibold">{value}</p></article>)}</section><section className="mt-7"><h2 className="font-display text-xl font-semibold">Recent score sheets</h2><div className="mt-4 grid gap-4 md:grid-cols-2">{sheets.map((sheet)=><article key={sheet.title} className="app-panel rounded-lg border border-[var(--app-border)] p-5"><div className="flex items-start justify-between"><div><h3 className="font-semibold">{sheet.title}</h3><p className="mt-1 text-xs text-[var(--app-muted)]">{sheet.students} records · {sheet.updated}</p></div><BookOpenCheck size={19} className="text-[var(--app-muted)]"/></div><div className="mt-6"><div className="flex justify-between text-xs"><span className="text-[var(--app-muted)]">Completion</span><span className="font-semibold">{sheet.progress}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--app-hover)]"><div className="h-full rounded-full bg-blue-600" style={{width:`${sheet.progress}%`}}/></div></div></article>)}</div></section></div></AppShell>;
+  const query = useWorkspaces();
+  return (
+    <AppShell area="workspace">
+      <div className="mx-auto max-w-[1300px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-500">
+              Private workspace
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">
+              Your workspaces
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-[var(--app-muted)]">
+              Keep each set of academic sessions, levels, and courses privately
+              separated.
+            </p>
+          </div>
+          <ButtonLink href="/workspace/new">
+            <Plus size={17} />
+            Create workspace
+          </ButtonLink>
+        </div>
+        {query.isPending && (
+          <div
+            aria-label="Loading workspaces"
+            className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+          >
+            {[0, 1, 2].map((item) => (
+              <Skeleton key={item} className="h-52 rounded-xl" />
+            ))}
+          </div>
+        )}
+        {query.isError && (
+          <section
+            role="alert"
+            className="app-panel mt-8 rounded-xl border border-[var(--app-border)] p-7"
+          >
+            <h2 className="font-display text-xl font-semibold">
+              Workspaces unavailable
+            </h2>
+            <p className="mt-2 text-sm text-[var(--app-muted)]">
+              {getApiErrorMessage(query.error)}
+            </p>
+            <button
+              type="button"
+              onClick={() => void query.refetch()}
+              className="focus-ring mt-5 rounded font-semibold text-blue-600"
+            >
+              Try again
+            </button>
+          </section>
+        )}
+        {query.isSuccess && query.data.length === 0 && (
+          <section className="app-panel mt-8 rounded-xl border border-dashed border-[var(--app-border)] px-6 py-16 text-center">
+            <FolderKanban className="mx-auto text-blue-500" size={34} />
+            <h2 className="mt-5 font-display text-2xl font-semibold">
+              Create your first workspace
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-[var(--app-muted)]">
+              Start with the workspace details, then optionally add academic
+              sessions and levels.
+            </p>
+            <ButtonLink href="/workspace/new" className="mt-6">
+              Create workspace
+            </ButtonLink>
+          </section>
+        )}
+        {query.isSuccess && query.data.length > 0 && (
+          <ul className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {query.data.map((workspace) => (
+              <li key={workspace.id}>
+                <Link
+                  href={`/workspace/${encodeURIComponent(workspace.id)}`}
+                  className="focus-ring app-panel group flex h-full min-h-52 flex-col rounded-xl border border-[var(--app-border)] p-6 transition-transform hover:-translate-y-0.5"
+                >
+                  <FolderKanban size={20} className="text-blue-500" />
+                  <h2 className="mt-5 font-display text-xl font-semibold">
+                    {workspace.name}
+                  </h2>
+                  <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-[var(--app-muted)]">
+                    {workspace.description || "No description provided."}
+                  </p>
+                  <span className="mt-auto flex items-end justify-between pt-6 text-xs text-[var(--app-muted)]">
+                    <span>Updated {formatDate(workspace.updatedAt)}</span>
+                    <ArrowRight
+                      size={17}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </AppShell>
+  );
 }

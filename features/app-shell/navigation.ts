@@ -5,8 +5,8 @@ import {
   ClipboardCheck,
   FileBarChart,
   LayoutDashboard,
+  PlusCircle,
   Settings,
-  SlidersHorizontal,
   UserRoundCog,
   Users,
   UsersRound,
@@ -49,14 +49,7 @@ export const navigationByArea = {
     { label: "Students", href: "/institution/students", icon: Users },
     { label: "Reports", href: "/institution/reports", icon: FileBarChart },
   ],
-  workspace: [
-    { label: "Score sheets", href: "/workspace/scores", icon: BookOpenCheck },
-    {
-      label: "Preferences",
-      href: "/workspace/preferences",
-      icon: SlidersHorizontal,
-    },
-  ],
+  workspace: [{ label: "Workspaces", href: "/workspace", icon: BookOpenCheck }],
   developer: [
     { label: "OAuth applications", href: "/api", icon: Code2 },
     { label: "Developer docs", href: "/developers", icon: BookOpenCheck },
@@ -74,9 +67,9 @@ export const settingsByArea: Record<
     icon: Settings,
   },
   workspace: {
-    label: "Workspace settings",
-    href: "/workspace/settings",
-    icon: Settings,
+    label: "Create workspace",
+    href: "/workspace/new",
+    icon: PlusCircle,
   },
   developer: {
     label: "Account settings",
