@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 export function Dialog({
   open,
@@ -19,6 +19,7 @@ export function Dialog({
   dismissible?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  const handleClose = useEffectEvent(onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -29,10 +30,15 @@ export function Dialog({
           "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href]",
         ) ?? [],
       );
-    focusable()[0]?.focus();
+    const requestedFocus =
+      panel.current?.querySelector<HTMLElement>("[autofocus]");
+    const firstContentControl = focusable().find(
+      (item) => item.getAttribute("aria-label") !== "Close",
+    );
+    (requestedFocus ?? firstContentControl ?? panel.current)?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && dismissible) onClose();
+      if (event.key === "Escape" && dismissible) handleClose();
       if (event.key !== "Tab") return;
       const items = focusable();
       if (!items.length) return;
@@ -52,7 +58,7 @@ export function Dialog({
       document.removeEventListener("keydown", onKeyDown);
       previous?.focus();
     };
-  }, [dismissible, onClose, open]);
+  }, [dismissible, open]);
 
   if (!open) return null;
   return (
@@ -69,6 +75,7 @@ export function Dialog({
         ref={panel}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         aria-labelledby="dialog-title"
         aria-describedby={description ? "dialog-description" : undefined}
         className="app-panel relative z-10 max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-[var(--app-border)] p-6 shadow-2xl"

@@ -23,6 +23,9 @@ export default function WorkspaceChrome({
     { label: "Sessions", href: `${base}/sessions` },
     { label: "Levels", href: `${base}/levels` },
     { label: "Courses", href: `${base}/courses` },
+    { label: "Schemes", href: `${base}/assessment-schemes` },
+    { label: "Students", href: `${base}/students` },
+    { label: "Results", href: `${base}/results` },
   ];
   return (
     <AppShell area="workspace">
