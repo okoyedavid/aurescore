@@ -25,9 +25,9 @@ function DangerZone({ workspace }: { workspace: WorkspaceDetails }) {
     } catch {}
   }
   return (
-    <section className="mt-6 rounded-xl border border-red-300/70 p-6">
+    <section className="mt-6 border border-red-300/70 p-6">
       <h2 className="font-display text-xl font-semibold">Delete workspace</h2>
-      <p className="mt-2 text-sm text-[var(--app-muted)]">
+      <p className="mt-2 text-xs text-[var(--app-muted)]">
         Permanently removes this workspace and all of its private sessions,
         levels, courses, and related data.
       </p>
@@ -92,7 +92,7 @@ export default function WorkspaceOverviewPage({
     <WorkspaceChrome workspaceId={workspaceId}>
       {(workspace) => (
         <>
-          <section className="grid gap-4 sm:grid-cols-3">
+          <section className="grid border-l border-t border-[var(--app-border)] sm:grid-cols-3">
             {[
               {
                 label: "Sessions",
@@ -112,7 +112,7 @@ export default function WorkspaceOverviewPage({
             ].map(({ label, value, icon: Icon }) => (
               <article
                 key={label}
-                className="app-panel rounded-xl border border-[var(--app-border)] p-5"
+                className="app-panel border-b border-r border-[var(--app-border)] p-5"
               >
                 <Icon size={20} className="text-blue-500" />
                 <p className="mt-5 text-xs text-[var(--app-muted)]">{label}</p>
@@ -122,11 +122,11 @@ export default function WorkspaceOverviewPage({
               </article>
             ))}
           </section>
-          <section className="app-panel mt-6 rounded-xl border border-[var(--app-border)] p-6">
+          <section className="app-panel mt-6 border border-[var(--app-border)] p-6">
             <h2 className="font-display text-xl font-semibold">
               Workspace privacy
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--app-muted)]">
+            <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--app-muted)]">
               All resources shown here are scoped to this workspace. Access is
               checked by the server on every request.
             </p>

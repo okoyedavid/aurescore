@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { normalizeApiError } from "@/lib/api/errors";
 import WorkspaceChrome from "./components/WorkspaceChrome";
 import { FieldError, RequestError } from "./components/FieldError";
-import { useCourseMutations, useCourses } from "./hooks";
+import { useCourseMutations, useCourses, useLevels, useTerms } from "./hooks";
 import type { CourseInput, CourseType, WorkspaceCourse } from "./types";
 import {
   normalizeCourse,
@@ -39,7 +39,15 @@ function parseMetadata(value: string): {
   }
 }
 function Courses({ workspaceId }: { workspaceId: string }) {
-  const query = useCourses(workspaceId);
+  const [levelId, setLevelId] = useState("");
+  const [termId, setTermId] = useState("");
+  const [search, setSearch] = useState("");
+  const query = useCourses(workspaceId, {
+    ...(levelId ? { levelId } : {}),
+    ...(termId ? { termId } : {}),
+  });
+  const levels = useLevels(workspaceId);
+  const terms = useTerms(workspaceId);
   const mutations = useCourseMutations(workspaceId);
   const [editing, setEditing] = useState<WorkspaceCourse | null | undefined>(
     undefined,
@@ -49,6 +57,15 @@ function Courses({ workspaceId }: { workspaceId: string }) {
   const locked = useRef(false);
   const mutation = editing?.id ? mutations.update : mutations.create;
   const removal = mutations.remove;
+  const visibleCourses = useMemo(() => {
+    const needle = search.trim().toLocaleLowerCase();
+    if (!needle) return query.data ?? [];
+    return (query.data ?? []).filter(
+      (course) =>
+        course.name.toLocaleLowerCase().includes(needle) ||
+        course.code?.toLocaleLowerCase().includes(needle),
+    );
+  }, [query.data, search]);
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (locked.current || mutation.isPending) return;
@@ -58,6 +75,8 @@ function Courses({ workspaceId }: { workspaceId: string }) {
       code: String(data.get("code") ?? ""),
       type: String(data.get("type") ?? "COURSE") as CourseType,
     });
+    input.defaultLevelId = String(data.get("defaultLevelId") ?? "") || null;
+    input.defaultTermId = String(data.get("defaultTermId") ?? "") || null;
     const metadata = parseMetadata(String(data.get("metadata") ?? ""));
     if (!metadata.error) input.metadata = metadata.value;
     const next = {
@@ -97,7 +116,7 @@ function Courses({ workspaceId }: { workspaceId: string }) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-2xl font-semibold">Courses</h2>
-          <p className="mt-1 text-sm text-[var(--app-muted)]">
+          <p className="mt-1 text-xs text-[var(--app-muted)]">
             Course offerings and results are outside this workspace setup.
           </p>
         </div>
@@ -112,11 +131,68 @@ function Courses({ workspaceId }: { workspaceId: string }) {
           Add course
         </Button>
       </div>
-      {query.isPending && <Skeleton className="mt-5 h-52 rounded-xl" />}
+      <section
+        className="app-panel mt-5 grid gap-4 border border-[var(--app-border)] p-5 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end"
+        aria-label="Course default filters"
+      >
+        <label className="text-sm font-semibold">
+          Default level
+          <Select
+            value={levelId}
+            onChange={(event) => setLevelId(event.target.value)}
+            className="mt-1"
+          >
+            <option value="">All levels</option>
+            {levels.data?.map((level) => (
+              <option key={level.id} value={level.id}>
+                {level.name}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label className="text-sm font-semibold">
+          Default term
+          <Select
+            value={termId}
+            onChange={(event) => setTermId(event.target.value)}
+            className="mt-1"
+          >
+            <option value="">All terms</option>
+            {terms.data?.map((term) => (
+              <option key={term.id} value={term.id}>
+                {term.name}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label className="text-sm font-semibold">
+          Search courses
+          <Input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Name or code"
+            className="mt-1"
+          />
+        </label>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!levelId && !termId && !search}
+          onClick={() => {
+            setLevelId("");
+            setTermId("");
+            setSearch("");
+          }}
+        >
+          Clear filters
+        </Button>
+      </section>
+      {query.isPending && <Skeleton className="mt-5 h-52 rounded-none" />}
       {query.isError && (
         <section
           role="alert"
-          className="app-panel mt-5 rounded-xl border border-[var(--app-border)] p-5"
+          className="app-panel mt-5 border border-[var(--app-border)] p-5"
         >
           <p>{normalizeApiError(query.error).message}</p>
           <button
@@ -127,21 +203,27 @@ function Courses({ workspaceId }: { workspaceId: string }) {
           </button>
         </section>
       )}
-      {query.data?.length === 0 && (
-        <p className="app-panel mt-5 rounded-xl border border-dashed border-[var(--app-border)] p-10 text-center text-sm text-[var(--app-muted)]">
-          No courses yet.
+      {!query.isPending && !query.isError && visibleCourses.length === 0 && (
+        <p className="app-panel mt-5 border border-dashed border-[var(--app-border)] p-10 text-center text-xs text-[var(--app-muted)]">
+          {levelId || termId || search
+            ? "No courses match these filters."
+            : "No courses yet."}
         </p>
       )}
-      <ul className="mt-5 grid gap-3 md:grid-cols-2">
-        {query.data?.map((item) => (
+      <ul className="mt-5 grid border-l border-t border-[var(--app-border)] md:grid-cols-2">
+        {visibleCourses.map((item) => (
           <li
             key={item.id}
-            className="app-panel flex items-start gap-4 rounded-xl border border-[var(--app-border)] p-5"
+            className="app-panel flex items-start gap-4 border-b border-r border-[var(--app-border)] p-5"
           >
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold">{item.name}</h3>
               <p className="mt-1 text-xs text-[var(--app-muted)]">
                 {item.code || "No code"} · {item.type.toLowerCase()}
+              </p>
+              <p className="mt-2 text-xs text-[var(--app-muted)]">
+                Defaults: {item.defaultLevel?.name ?? "No level"} ·{" "}
+                {item.defaultTerm?.name ?? "No term"}
               </p>
             </div>
             <button
@@ -174,6 +256,50 @@ function Courses({ workspaceId }: { workspaceId: string }) {
         title={editing ? "Edit course" : "Add course"}
       >
         <form onSubmit={save} noValidate className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm font-semibold">
+              Default level{" "}
+              <span className="font-normal text-[var(--app-muted)]">
+                (optional)
+              </span>
+              <Select
+                name="defaultLevelId"
+                defaultValue={editing?.defaultLevelId ?? ""}
+                className="mt-1"
+              >
+                <option value="">No default</option>
+                {levels.data?.map((level) => (
+                  <option key={level.id} value={level.id}>
+                    {level.name}
+                  </option>
+                ))}
+              </Select>
+              <span className="mt-1 block text-xs font-normal text-[var(--app-muted)]">
+                Prefills new offerings; it does not restrict this course.
+              </span>
+            </label>
+            <label className="text-sm font-semibold">
+              Default term{" "}
+              <span className="font-normal text-[var(--app-muted)]">
+                (optional)
+              </span>
+              <Select
+                name="defaultTermId"
+                defaultValue={editing?.defaultTermId ?? ""}
+                className="mt-1"
+              >
+                <option value="">No default</option>
+                {terms.data?.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.name}
+                  </option>
+                ))}
+              </Select>
+              <span className="mt-1 block text-xs font-normal text-[var(--app-muted)]">
+                Prefills new offerings; it does not restrict this course.
+              </span>
+            </label>
+          </div>
           <label className="block text-sm font-semibold">
             Name
             <Input

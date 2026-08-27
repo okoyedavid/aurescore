@@ -25,6 +25,8 @@ export type WideCourseRow = {
   name: string;
   code: string;
   type: CourseType;
+  defaultLevelId?: string;
+  defaultTermId?: string;
 };
 export type WideValues = {
   name: string;
@@ -102,6 +104,16 @@ export function buildWorkspacePatch(
       if (after.name !== before.name) update.name = after.name;
       if (after.code !== before.code) update.code = after.code;
       if (after.type !== before.type) update.type = after.type;
+      if (
+        after.defaultLevelId !== undefined &&
+        after.defaultLevelId !== before.defaultLevelId
+      )
+        update.defaultLevelId = after.defaultLevelId;
+      if (
+        after.defaultTermId !== undefined &&
+        after.defaultTermId !== before.defaultTermId
+      )
+        update.defaultTermId = after.defaultTermId;
       return Object.keys(update).length > 1 ? [update] : [];
     });
   if (courseCreate.length || courseUpdate.length)

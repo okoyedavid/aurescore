@@ -3,6 +3,7 @@ import type {
   CreateWorkspaceInput,
   LevelInput,
   SessionInput,
+  TermInput,
   WorkspacePatch,
 } from "./types";
 
@@ -57,6 +58,36 @@ export function validateSession(
   return errors;
 }
 
+export function normalizeTerm(input: {
+  name: string;
+  code?: string;
+  order?: string;
+  metadata?: Record<string, unknown> | null;
+}): TermInput {
+  const order = input.order?.trim();
+  return {
+    name: input.name.trim(),
+    code: optional(input.code ?? ""),
+    order: order ? Number(order) : null,
+    metadata: input.metadata ?? null,
+  };
+}
+
+export function validateTerm(input: TermInput, prefix = "term"): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!input.name || input.name.length > 120)
+    errors[`${prefix}.name`] = "Name must be between 1 and 120 characters.";
+  if ((input.code?.length ?? 0) > 30)
+    errors[`${prefix}.code`] = "Code must be at most 30 characters.";
+  if (
+    input.order !== null &&
+    input.order !== undefined &&
+    !Number.isInteger(input.order)
+  )
+    errors[`${prefix}.order`] = "Order must be a whole number.";
+  return errors;
+}
+
 export function normalizeLevel(input: {
   name: string;
   code?: string;
@@ -92,11 +123,19 @@ export function normalizeCourse(input: {
   name: string;
   code?: string;
   type?: CourseInput["type"];
+  defaultLevelId?: string | null;
+  defaultTermId?: string | null;
 }): CourseInput {
   return {
     name: input.name.trim(),
     code: optional(input.code ?? ""),
     type: input.type ?? "COURSE",
+    ...(input.defaultLevelId !== undefined
+      ? { defaultLevelId: input.defaultLevelId || null }
+      : {}),
+    ...(input.defaultTermId !== undefined
+      ? { defaultTermId: input.defaultTermId || null }
+      : {}),
   };
 }
 
@@ -122,11 +161,16 @@ export function validateWorkspace(input: CreateWorkspaceInput): FieldErrors {
     errors.sessions = "A workspace can start with at most 20 sessions.";
   if ((input.levels?.length ?? 0) > 50)
     errors.levels = "A workspace can start with at most 50 levels.";
+  if ((input.terms?.length ?? 0) > 50)
+    errors.terms = "A workspace can start with at most 50 terms.";
   input.sessions?.forEach((item, index) =>
     Object.assign(errors, validateSession(item, `sessions.${index}`)),
   );
   input.levels?.forEach((item, index) =>
     Object.assign(errors, validateLevel(item, `levels.${index}`)),
+  );
+  input.terms?.forEach((item, index) =>
+    Object.assign(errors, validateTerm(item, `terms.${index}`)),
   );
   return errors;
 }
@@ -136,6 +180,7 @@ export function buildCreateWorkspaceInput(values: {
   description: string;
   sessions: SessionInput[];
   levels: LevelInput[];
+  terms?: TermInput[];
 }): CreateWorkspaceInput {
   const input: CreateWorkspaceInput = {
     name: values.name.trim(),
@@ -143,6 +188,7 @@ export function buildCreateWorkspaceInput(values: {
   };
   if (values.sessions.length) input.sessions = values.sessions;
   if (values.levels.length) input.levels = values.levels;
+  if (values.terms?.length) input.terms = values.terms;
   return input;
 }
 

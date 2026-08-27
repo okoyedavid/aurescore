@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-dm-sans);
+  --font-mono: var(--font-jetbrains-mono);
   --color-muted: oklch(0.97 0 0);
   --color-ink: #0d0d0d;
   --color-navy: #1b3c53;
@@ -24,8 +24,8 @@
   --color-line: #e4e1d9;
   --color-line-dark: #26262a;
 
-  --font-display: var(--font-display), sans-serif;
-  --font-body: var(--font-body), sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-body: var(--font-dm-sans), Arial, sans-serif;
 
   --radius-xl2: 1.25rem;
   --radius-xl3: 1.75rem;
@@ -43,7 +43,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), Arial, sans-serif;
   overflow-x: clip;
 }
 
@@ -98,6 +98,47 @@ html.app-surface body,
 
 .app-panel {
   background: var(--app-panel);
+}
+
+/* Keep the public component language intact while product controls follow the
+   tighter, square dashboard system. */
+.dashboard-scope .app-button {
+  min-height: 2.5rem;
+  border-radius: 0.125rem;
+  padding-inline: 1rem;
+  font-size: 0.75rem;
+}
+
+.dashboard-scope .app-button-outline {
+  border-color: var(--app-border);
+  background: var(--app-panel);
+  color: var(--app-text);
+}
+
+.dashboard-scope .app-button-outline:hover,
+.dashboard-scope .app-button-ghost:hover {
+  background: var(--app-hover);
+}
+
+.dashboard-scope .app-button-ghost {
+  color: #2563eb;
+}
+
+.dashboard-scope .app-dialog {
+  border-radius: 0;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 0.32);
+}
+
+.dashboard-scope .app-dialog-description {
+  font-size: 0.75rem;
+}
+
+.dashboard-scope .app-dialog-title {
+  letter-spacing: -0.03em;
+}
+
+.dashboard-scope .app-icon-button {
+  border-radius: 0.125rem;
 }
 
 .app-icon-button {
@@ -160,7 +201,7 @@ html.app-surface body,
   background: currentColor;
   transform: scaleX(0);
   transform-origin: right;
-  transition: transform 240ms ease;
+  transition: transform 180ms ease;
 }
 .nav-link:hover::after {
   transform: scaleX(1);
@@ -265,10 +306,10 @@ html.app-surface body,
   opacity: 1;
 }
 .audience-card {
-  transition: transform 240ms ease;
+  transition: transform 160ms ease;
 }
 .audience-card:hover {
-  transform: translateX(0.3rem);
+  transform: translateX(2px);
 }
 a:hover .circle-arrow {
   transform: rotate(45deg);

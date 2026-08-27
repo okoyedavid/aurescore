@@ -52,17 +52,17 @@ export default function OAuthClientDetailsPage({
   const disable = useDisableOAuthClient(clientId);
   if (query.isPending)
     return (
-      <div className="mx-auto max-w-5xl space-y-5 px-5 py-12 md:px-8">
+      <div className="mx-auto w-full max-w-[1500px] space-y-5 px-[clamp(20px,4.5vw,72px)] py-[clamp(28px,4vw,58px)] max-[900px]:px-5">
         <Skeleton className="h-12 w-2/3" />
-        <Skeleton className="h-80 rounded-xl" />
+        <Skeleton className="h-80 rounded-none" />
       </div>
     );
   if (query.isError || !query.data)
     return (
-      <div className="mx-auto max-w-3xl px-5 py-12">
+      <div className="mx-auto w-full max-w-[1500px] px-[clamp(20px,4.5vw,72px)] py-[clamp(28px,4vw,58px)] max-[900px]:px-5">
         <div
           role="alert"
-          className="app-panel rounded-xl border border-[var(--app-border)] p-6"
+          className="app-panel border border-[var(--app-border)] p-5"
         >
           <h1 className="font-display text-2xl font-semibold">
             Application unavailable
@@ -99,24 +99,26 @@ export default function OAuthClientDetailsPage({
     (rotate.isError && getApiErrorMessage(rotate.error)) ||
     (disable.isError && getApiErrorMessage(disable.error));
   return (
-    <div className="mx-auto max-w-5xl px-5 py-8 md:px-8 md:py-12">
+    <div className="mx-auto w-full max-w-[1500px] px-[clamp(20px,4.5vw,72px)] pb-[72px] pt-[clamp(28px,4vw,58px)] max-[900px]:px-5 max-[900px]:pb-14 max-[900px]:pt-7">
       <Link
         href="/api"
-        className="focus-ring rounded text-sm font-semibold text-blue-600"
+        className="focus-ring text-[10px] font-bold uppercase tracking-[0.13em] text-blue-600"
       >
         ← OAuth applications
       </Link>
-      <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mt-5 flex flex-col gap-5 border-b border-[var(--app-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-4xl font-semibold">{client.name}</h1>
-          <p className="mt-2 text-sm text-[var(--app-muted)]">
+          <h1 className="font-display text-[clamp(38px,4vw,50px)] font-medium leading-none tracking-[-0.045em] max-[650px]:text-[39px]">
+            {client.name}
+          </h1>
+          <p className="mt-2.5 max-w-[660px] text-xs leading-normal text-[var(--app-muted)]">
             {client.description || "No description provided."}
           </p>
         </div>
         <span className="rounded-full bg-[var(--app-hover)] px-3 py-1 text-xs font-semibold">
           {client.state}
         </span>
-      </div>
+      </header>
       {notice && (
         <p
           role="status"
@@ -133,7 +135,7 @@ export default function OAuthClientDetailsPage({
           {actionError}
         </p>
       )}
-      <dl className="app-panel mt-8 grid gap-7 rounded-xl border border-[var(--app-border)] p-6 sm:grid-cols-2 md:p-8">
+      <dl className="app-panel mt-8 grid max-w-5xl gap-7 border border-[var(--app-border)] p-6 sm:grid-cols-2 md:p-8">
         <Detail label="Client ID">
           <span className="inline-flex items-center gap-2">
             <code>{client.clientId}</code>
@@ -198,7 +200,7 @@ export default function OAuthClientDetailsPage({
           </dd>
         </div>
       </dl>
-      <section className="mt-8 rounded-xl border border-red-300/60 p-6">
+      <section className="mt-8 max-w-5xl border border-red-300/60 p-6">
         <h2 className="font-display text-2xl font-semibold">
           Sensitive actions
         </h2>

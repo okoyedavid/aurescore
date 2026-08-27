@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronUp, MonitorCog, UserRound, X } from "lucide-react";
+import {
+  ChevronUp,
+  ExternalLink,
+  MonitorCog,
+  Moon,
+  Sun,
+  UserRound,
+  X,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthUser } from "@/features/auth/hooks";
@@ -33,8 +41,9 @@ function NavigationLink({
       href={item.href}
       title={compact ? item.label : undefined}
       aria-label={compact ? item.label : undefined}
+      aria-current={active ? "page" : undefined}
       onClick={close}
-      className={`focus-ring relative flex min-h-11 items-center rounded-md text-sm transition-colors ${compact ? "justify-center px-2" : "gap-3 px-3"} ${active ? "bg-[var(--app-active)] text-[var(--app-text)]" : "text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)]"}`}
+      className={`focus-ring relative flex min-h-[38px] items-center rounded-sm text-[11px] transition-colors [&_svg]:h-4 [&_svg]:w-4 [&_svg]:stroke-[1.7] ${compact ? "justify-center px-2" : "gap-3 px-3"} ${active ? "bg-[var(--app-active)] font-semibold text-[var(--app-text)]" : "text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)]"}`}
     >
       <Icon size={18} aria-hidden="true" />
       <span className={compact ? "sr-only" : "flex-1 font-medium"}>
@@ -63,7 +72,7 @@ export default function AppSidebar({
 }) {
   const pathname = usePathname();
   const { data: user } = useAuthUser();
-  const { collapsed } = useAppShell();
+  const { collapsed, theme, toggleTheme } = useAppShell();
   const [profileOpen, setProfileOpen] = useState(false);
   const compact = collapsed && !mobile;
   const navigation = navigationByArea[area];
@@ -85,9 +94,20 @@ export default function AppSidebar({
         <Link
           href="/dashboard"
           aria-label="AureScore dashboard"
-          className="focus-ring rounded font-display text-xl font-semibold"
+          className="focus-ring rounded-sm"
         >
-          {compact ? "A" : "AureScore"}
+          {compact ? (
+            "A"
+          ) : (
+            <span>
+              <span className="block font-display text-base font-semibold leading-none">
+                AureScore
+              </span>
+              <span className="mt-0.5 block text-[9px] font-medium uppercase leading-normal tracking-[0.1em] text-[var(--app-muted)]">
+                Academic result management
+              </span>
+            </span>
+          )}
         </Link>
         {mobile && (
           <button
@@ -105,7 +125,7 @@ export default function AppSidebar({
         className={`nav-scroll flex-1 overflow-y-auto py-4 ${compact ? "px-2" : "px-4"}`}
       >
         {!compact && (
-          <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--app-muted)]">
+          <p className="px-3 text-[9px] font-bold uppercase tracking-[0.13em] text-[var(--app-muted)]">
             Switch workspace
           </p>
         )}
@@ -126,7 +146,7 @@ export default function AppSidebar({
 
         <div className="my-4 border-t border-[var(--app-border)]" />
         {!compact && (
-          <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--app-muted)]">
+          <p className="px-3 text-[9px] font-bold uppercase tracking-[0.13em] text-[var(--app-muted)]">
             {area === "dashboard"
               ? "Your account"
               : area === "institution"
@@ -157,6 +177,32 @@ export default function AppSidebar({
       <div
         className={`relative shrink-0 border-t border-[var(--app-border)] p-3 ${compact ? "space-y-2" : "space-y-1"}`}
       >
+        <Link
+          href="/"
+          onClick={close}
+          title={compact ? "View public site" : undefined}
+          className={`focus-ring flex min-h-10 items-center rounded-sm text-[10px] font-semibold text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)] ${compact ? "justify-center px-2" : "gap-3 px-3"}`}
+        >
+          <ExternalLink size={16} />
+          <span className={compact ? "sr-only" : ""}>View public site</span>
+        </Link>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={
+            compact
+              ? theme === "dark"
+                ? "Use light mode"
+                : "Use dark mode"
+              : undefined
+          }
+          className={`focus-ring flex min-h-10 w-full items-center rounded-sm text-[10px] font-semibold text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)] ${compact ? "justify-center px-2" : "gap-3 px-3"}`}
+        >
+          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          <span className={compact ? "sr-only" : ""}>
+            {theme === "dark" ? "Use light mode" : "Use dark mode"}
+          </span>
+        </button>
         <NavigationLink
           item={settings}
           compact={compact}

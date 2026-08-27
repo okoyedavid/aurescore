@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, FolderKanban, Plus } from "lucide-react";
-import { ButtonLink } from "@/components/ui/Button";
+import { ArrowRight, FolderKanban } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import AppShell from "@/features/app-shell/components/AppShell";
 import { getApiErrorMessage } from "@/lib/api/errors";
@@ -19,90 +18,105 @@ export default function WorkspacePage() {
   const query = useWorkspaces();
   return (
     <AppShell area="workspace">
-      <div className="mx-auto max-w-[1300px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto w-full max-w-[1500px] px-[clamp(20px,4.5vw,72px)] pb-[72px] pt-[clamp(28px,4vw,58px)] max-[900px]:px-5 max-[900px]:pb-14 max-[900px]:pt-7">
+        <header className="flex items-end justify-between gap-6 border-b border-[var(--app-border)] pb-6 max-[650px]:flex-col max-[650px]:items-stretch">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-500">
+            <p className="mb-2 text-[10px] font-bold uppercase leading-normal tracking-[0.13em] text-blue-600">
               Private workspace
             </p>
-            <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">
+            <h1 className="m-0 font-display text-[clamp(38px,4vw,50px)] font-medium leading-none tracking-[-0.045em] max-[650px]:text-[39px]">
               Your workspaces
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-[var(--app-muted)]">
-              Keep each set of academic sessions, levels, and courses privately
-              separated.
+            <p className="mt-2.5 max-w-[660px] text-xs leading-normal text-[var(--app-muted)]">
+              Keep each set of academic sessions, reusable terms, levels, and
+              courses privately separated.
             </p>
           </div>
-          <ButtonLink href="/workspace/new">
-            <Plus size={17} />
+          <Link
+            href="/workspace/new"
+            className="focus-ring inline-flex min-h-10 items-center justify-center rounded-sm border border-[var(--app-border)] bg-[var(--app-panel)] px-4 text-xs font-semibold text-[var(--app-text)] transition-colors duration-150 hover:bg-[var(--app-hover)]"
+          >
             Create workspace
-          </ButtonLink>
-        </div>
+          </Link>
+        </header>
         {query.isPending && (
           <div
             aria-label="Loading workspaces"
-            className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+            className="mt-8 grid grid-cols-3 border-l border-t border-[var(--app-border)] max-[1150px]:grid-cols-2 max-[650px]:grid-cols-1"
           >
             {[0, 1, 2].map((item) => (
-              <Skeleton key={item} className="h-52 rounded-xl" />
+              <div
+                key={item}
+                className="border-b border-r border-[var(--app-border)] bg-[var(--app-panel)] p-5"
+              >
+                <Skeleton className="h-40 rounded-none" />
+              </div>
             ))}
           </div>
         )}
         {query.isError && (
           <section
             role="alert"
-            className="app-panel mt-8 rounded-xl border border-[var(--app-border)] p-7"
+            className="mt-8 border border-[var(--app-border)] bg-[var(--app-panel)] p-5"
           >
-            <h2 className="font-display text-xl font-semibold">
+            <p className="mb-2 text-[10px] font-bold uppercase leading-normal tracking-[0.13em] text-blue-600">
+              Unable to load
+            </p>
+            <h2 className="m-0 font-display text-2xl font-semibold tracking-[-0.03em]">
               Workspaces unavailable
             </h2>
-            <p className="mt-2 text-sm text-[var(--app-muted)]">
+            <p className="mt-2 text-xs text-[var(--app-muted)]">
               {getApiErrorMessage(query.error)}
             </p>
             <button
               type="button"
               onClick={() => void query.refetch()}
-              className="focus-ring mt-5 rounded font-semibold text-blue-600"
+              className="focus-ring mt-5 text-xs font-semibold text-blue-600"
             >
               Try again
             </button>
           </section>
         )}
         {query.isSuccess && query.data.length === 0 && (
-          <section className="app-panel mt-8 rounded-xl border border-dashed border-[var(--app-border)] px-6 py-16 text-center">
-            <FolderKanban className="mx-auto text-blue-500" size={34} />
-            <h2 className="mt-5 font-display text-2xl font-semibold">
+          <section className="mt-8 border border-dashed border-[var(--app-border)] bg-[var(--app-panel)] px-6 py-16 text-center">
+            <FolderKanban className="mx-auto text-blue-600" size={30} />
+            <h2 className="mt-5 font-display text-2xl font-semibold tracking-[-0.03em]">
               Create your first workspace
             </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-[var(--app-muted)]">
+            <p className="mx-auto mt-2 max-w-md text-xs text-[var(--app-muted)]">
               Start with the workspace details, then optionally add academic
-              sessions and levels.
+              sessions, terms, and levels.
             </p>
-            <ButtonLink href="/workspace/new" className="mt-6">
+            <Link
+              href="/workspace/new"
+              className="focus-ring mt-6 inline-flex min-h-10 items-center justify-center rounded-sm bg-blue-600 px-4 text-xs font-semibold text-white transition-colors duration-150 hover:bg-blue-500"
+            >
               Create workspace
-            </ButtonLink>
+            </Link>
           </section>
         )}
         {query.isSuccess && query.data.length > 0 && (
-          <ul className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <ul className="mt-8 grid grid-cols-3 border-l border-t border-[var(--app-border)] max-[1150px]:grid-cols-2 max-[650px]:grid-cols-1">
             {query.data.map((workspace) => (
-              <li key={workspace.id}>
+              <li key={workspace.id} className="flex">
                 <Link
                   href={`/workspace/${encodeURIComponent(workspace.id)}`}
-                  className="focus-ring app-panel group flex h-full min-h-52 flex-col rounded-xl border border-[var(--app-border)] p-6 transition-transform hover:-translate-y-0.5"
+                  className="focus-ring group flex min-h-[184px] w-full flex-col border-b border-r border-[var(--app-border)] bg-[var(--app-panel)] p-5 transition-[background-color,border-color,transform] duration-150 hover:-translate-y-px hover:border-blue-600 hover:bg-[var(--app-hover)]"
                 >
-                  <FolderKanban size={20} className="text-blue-500" />
-                  <h2 className="mt-5 font-display text-xl font-semibold">
+                  <span className="inline-flex h-[38px] w-[38px] items-center justify-center border border-[var(--app-border)] text-blue-600">
+                    <FolderKanban size={18} />
+                  </span>
+                  <h2 className="mt-4 font-display text-xl font-semibold tracking-[-0.03em]">
                     {workspace.name}
                   </h2>
-                  <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-[var(--app-muted)]">
+                  <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[var(--app-muted)]">
                     {workspace.description || "No description provided."}
                   </p>
-                  <span className="mt-auto flex items-end justify-between pt-6 text-xs text-[var(--app-muted)]">
+                  <span className="mt-auto flex items-end justify-between pt-5 text-[10px] text-[var(--app-muted)]">
                     <span>Updated {formatDate(workspace.updatedAt)}</span>
                     <ArrowRight
-                      size={17}
-                      className="transition-transform group-hover:translate-x-1"
+                      size={15}
+                      className="text-[var(--app-text)] transition-transform group-hover:translate-x-0.5"
                     />
                   </span>
                 </Link>

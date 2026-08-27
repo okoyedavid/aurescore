@@ -4,7 +4,9 @@ import { buildWorkspacePatch } from "./wide-patch";
 import {
   buildCreateWorkspaceInput,
   dateInputToIso,
+  normalizeTerm,
   normalizeSession,
+  validateTerm,
   validateSession,
 } from "./validation";
 
@@ -14,6 +16,7 @@ const workspace: WorkspaceDetails = {
   description: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
+  terms: [],
   sessions: [
     {
       id: "cm-session",
@@ -44,6 +47,10 @@ const workspace: WorkspaceDetails = {
       name: "Physics",
       code: "PHY101",
       type: "COURSE",
+      defaultLevelId: null,
+      defaultTermId: null,
+      defaultLevel: null,
+      defaultTerm: null,
       metadata: null,
       createdAt: "",
       updatedAt: "",
@@ -179,5 +186,33 @@ describe("workspace payload validation", () => {
         ],
       }),
     ).toEqual({});
+  });
+});
+
+describe("term validation", () => {
+  it("normalizes reusable term fields", () => {
+    expect(
+      normalizeTerm({
+        name: " First Semester ",
+        code: " SEM1 ",
+        order: "1",
+      }),
+    ).toEqual({
+      name: "First Semester",
+      code: "SEM1",
+      order: 1,
+      metadata: null,
+    });
+  });
+
+  it("rejects invalid names, codes, and non-integer order", () => {
+    const errors = validateTerm({
+      name: "",
+      code: "x".repeat(31),
+      order: 1.5,
+    });
+    expect(errors["term.name"]).toMatch(/1 and 120/i);
+    expect(errors["term.order"]).toMatch(/whole number/i);
+    expect(errors["term.code"]).toMatch(/at most 30/i);
   });
 });

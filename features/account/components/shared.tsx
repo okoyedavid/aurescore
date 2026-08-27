@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export function SettingsPanel({ children }: { children: React.ReactNode }) {
   return (
-    <section className="app-panel rounded-xl border border-[var(--app-border)] p-5 sm:p-7">
+    <section className="app-panel border border-[var(--app-border)] p-5 sm:p-7">
       {children}
     </section>
   );
@@ -18,7 +18,7 @@ export function SettingsHeading({
   return (
     <div>
       <h2 className="font-display text-2xl font-semibold">{title}</h2>
-      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--app-muted)]">
+      <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--app-muted)]">
         {copy}
       </p>
     </div>

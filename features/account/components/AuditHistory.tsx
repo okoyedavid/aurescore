@@ -52,7 +52,7 @@ export default function AuditHistory() {
           {events.map((event) => (
             <li
               key={event.eventId}
-              className="rounded-lg border border-[var(--app-border)] p-4 sm:p-5"
+              className="border border-[var(--app-border)] p-4 sm:p-5"
             >
               <div className="flex items-start gap-4">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--app-hover)]">

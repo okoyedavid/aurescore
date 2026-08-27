@@ -43,7 +43,7 @@ export default function ProtectedRoute({
           <button
             type="button"
             onClick={() => void refetch()}
-            className="focus-ring mt-6 min-h-11 rounded-full bg-lime px-6 text-sm font-semibold text-black"
+            className="focus-ring mt-6 min-h-11 rounded-md bg-lime px-6 text-sm font-semibold text-black"
           >
             Try again
           </button>

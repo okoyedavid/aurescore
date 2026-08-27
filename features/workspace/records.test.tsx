@@ -19,8 +19,10 @@ const offering: CourseOffering = {
   workspaceId: "cm-one",
   courseId: "cm-course",
   sessionId: "cm-session",
+  termId: null,
   levelId: null,
   assessmentSchemeId: "cm-scheme",
+  gradingSchemeId: null,
   creditUnits: "3.000",
   createdAt: "",
   updatedAt: "",
@@ -31,6 +33,7 @@ const offering: CourseOffering = {
     type: "COURSE",
   },
   session: { id: "cm-session", name: "2026/2027" },
+  term: null,
   level: null,
   assessmentScheme: {
     id: "cm-scheme",
@@ -40,6 +43,7 @@ const offering: CourseOffering = {
       { key: "exam", label: "Exam", maxScore: 70, weight: 70 },
     ],
   },
+  gradingScheme: null,
 };
 const student: Student = {
   id: "cm-student",
@@ -57,10 +61,25 @@ const result: ResultRecord = {
   studentId: student.id,
   scores: { ca: 24, exam: 61 },
   totalScore: "85.000",
-  status: "DRAFT",
   createdAt: "",
   updatedAt: "",
   student,
+  courseOffering: {
+    id: offering.id,
+    courseId: offering.courseId,
+    sessionId: offering.sessionId,
+    termId: offering.termId,
+    levelId: offering.levelId,
+    assessmentSchemeId: offering.assessmentSchemeId,
+    gradingSchemeId: offering.gradingSchemeId,
+    creditUnits: offering.creditUnits,
+    course: offering.course,
+    session: offering.session,
+    term: offering.term,
+    level: offering.level,
+    assessmentScheme: offering.assessmentScheme,
+    gradingScheme: offering.gradingScheme,
+  },
 };
 
 function renderClient(ui: ReactNode, setup?: (client: QueryClient) => void) {
@@ -75,26 +94,33 @@ function renderClient(ui: ReactNode, setup?: (client: QueryClient) => void) {
 describe("workspace record API and cache behavior", () => {
   beforeEach(() => apiMock.reset());
 
-  it("resolves lazily using the exact context and permits server reuse", async () => {
+  it("resolves lazily with and without optional academic context and permits server reuse", async () => {
     apiMock
       .onPost("/workspace/cm-one/course-offerings/resolve")
       .reply(200, offering);
-    const input = {
+    const fullInput = {
       courseId: "cm-course",
       sessionId: "cm-session",
+      termId: "cm-term",
       levelId: null,
       assessmentSchemeId: "cm-scheme",
+      gradingSchemeId: "cm-grading",
       creditUnits: 3,
     };
-    expect(await recordsApi.resolveCourseOffering("cm-one", input)).toEqual(
-      offering,
-    );
-    expect(await recordsApi.resolveCourseOffering("cm-one", input)).toEqual(
+    const requiredInput = {
+      courseId: "cm-course",
+      sessionId: "cm-session",
+      assessmentSchemeId: "cm-scheme",
+    };
+    expect(await recordsApi.resolveCourseOffering("cm-one", fullInput)).toEqual(
       offering,
     );
     expect(
+      await recordsApi.resolveCourseOffering("cm-one", requiredInput),
+    ).toEqual(offering);
+    expect(
       apiMock.history.post.map((request) => JSON.parse(request.data)),
-    ).toEqual([input, input]);
+    ).toEqual([fullInput, requiredInput]);
   });
 
   it("preserves conflict and rate-limit status/messages", async () => {
@@ -190,29 +216,23 @@ describe("workspace record API and cache behavior", () => {
     ]);
   });
 
-  it("replaces estimates with the authoritative response and supports publish/delete cache behavior", async () => {
+  it("uses the authoritative update response and sends a status-free exact score payload", async () => {
     apiMock
       .onPatch("/workspace/cm-one/results/cm-result")
-      .reply(200, { ...result, totalScore: "86.714", status: "PUBLISHED" });
-    apiMock.onDelete("/workspace/cm-one/results/cm-result").reply(204);
+      .reply(200, { ...result, totalScore: "86.714" });
     function Probe() {
       const mutations = useResultMutations("cm-one");
       return (
-        <>
-          <button
-            onClick={() =>
-              mutations.update.mutate({
-                id: result.id,
-                input: { scores: result.scores, status: "PUBLISHED" },
-              })
-            }
-          >
-            Publish
-          </button>
-          <button onClick={() => mutations.remove.mutate(result.id)}>
-            Delete
-          </button>
-        </>
+        <button
+          onClick={() =>
+            mutations.update.mutate({
+              id: result.id,
+              input: { scores: result.scores },
+            })
+          }
+        >
+          Update
+        </button>
       );
     }
     const client = renderClient(<Probe />, (cache) => {
@@ -222,7 +242,7 @@ describe("workspace record API and cache behavior", () => {
         totalScore: "85",
       });
     });
-    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() =>
       expect(
         client.getQueryData<ResultRecord>(
@@ -230,16 +250,52 @@ describe("workspace record API and cache behavior", () => {
         )?.totalScore,
       ).toBe("86.714"),
     );
-    expect(
-      client.getQueryData<ResultRecord>(
-        workspaceKeys.result("cm-one", result.id),
-      )?.status,
-    ).toBe("PUBLISHED");
+    expect(JSON.parse(apiMock.history.patch[0].data)).toEqual({
+      scores: result.scores,
+    });
+  });
+
+  it("handles a 204 deletion and invalidates result and affected-student academic caches", async () => {
+    apiMock.onDelete("/workspace/cm-one/results/cm-result").reply(204);
+    function Probe() {
+      const mutations = useResultMutations("cm-one");
+      return (
+        <button
+          onClick={() =>
+            mutations.remove.mutate({ id: result.id, studentId: student.id })
+          }
+        >
+          Delete
+        </button>
+      );
+    }
+    const client = renderClient(<Probe />, (cache) => {
+      cache.setQueryData(workspaceKeys.results("cm-one"), [result]);
+      cache.setQueryData(workspaceKeys.result("cm-one", result.id), result);
+      cache.setQueryData(
+        workspaceKeys.academicRecord("cm-one", student.id),
+        {},
+      );
+      cache.setQueryData(workspaceKeys.academicRevision("cm-one"), 0);
+    });
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() =>
       expect(
         client.getQueryData(workspaceKeys.result("cm-one", result.id)),
       ).toBeUndefined(),
     );
+    expect(apiMock.history.delete).toHaveLength(1);
+    expect(
+      client.getQueryState(workspaceKeys.results("cm-one"))?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryState(
+        workspaceKeys.academicRecord("cm-one", student.id),
+      )?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryData(workspaceKeys.academicRevision("cm-one")),
+    ).toBe(1);
+    expect(apiMock.history.post).toHaveLength(0);
   });
 });

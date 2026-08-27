@@ -10,6 +10,25 @@ import type {
   Student,
 } from "./types";
 
+function bumpAcademicRevision(
+  client: ReturnType<typeof useQueryClient>,
+  workspaceId: string,
+) {
+  client.setQueryData<number>(
+    workspaceKeys.academicRevision(workspaceId),
+    (current = 0) => current + 1,
+  );
+}
+
+export function useAcademicRevision(workspaceId: string) {
+  return useQuery({
+    queryKey: workspaceKeys.academicRevision(workspaceId),
+    queryFn: () => 0,
+    initialData: 0,
+    staleTime: Infinity,
+  });
+}
+
 export function useAssessmentSchemes(workspaceId: string) {
   return useQuery({
     queryKey: workspaceKeys.assessmentSchemes(workspaceId),
@@ -36,6 +55,7 @@ export function useAssessmentSchemeMutations(workspaceId: string) {
           workspaceKeys.assessmentScheme(workspaceId, scheme.id),
           scheme,
         );
+        bumpAcademicRevision(client, workspaceId);
         await refresh();
       },
     }),
@@ -53,6 +73,7 @@ export function useAssessmentSchemeMutations(workspaceId: string) {
           workspaceKeys.assessmentScheme(workspaceId, scheme.id),
           scheme,
         );
+        bumpAcademicRevision(client, workspaceId);
         await refresh();
       },
     }),
@@ -64,6 +85,81 @@ export function useAssessmentSchemeMutations(workspaceId: string) {
         client.removeQueries({
           queryKey: workspaceKeys.assessmentScheme(workspaceId, id),
           exact: true,
+        });
+        bumpAcademicRevision(client, workspaceId);
+        await refresh();
+      },
+    }),
+  };
+}
+
+export function useGradingSchemes(workspaceId: string) {
+  return useQuery({
+    queryKey: workspaceKeys.gradingSchemes(workspaceId),
+    queryFn: ({ signal }) => recordsApi.gradingSchemes(workspaceId, signal),
+    enabled: Boolean(workspaceId),
+    meta: { requiresAuth: true },
+  });
+}
+
+export function useGradingSchemeMutations(workspaceId: string) {
+  const client = useQueryClient();
+  const refresh = () =>
+    client.invalidateQueries({
+      queryKey: workspaceKeys.gradingSchemes(workspaceId),
+      exact: true,
+    });
+  return {
+    create: useMutation({
+      mutationFn: (
+        input: Parameters<typeof recordsApi.createGradingScheme>[1],
+      ) => recordsApi.createGradingScheme(workspaceId, input),
+      retry: false,
+      onSuccess: async (scheme) => {
+        client.setQueryData(
+          workspaceKeys.gradingScheme(workspaceId, scheme.id),
+          scheme,
+        );
+        bumpAcademicRevision(client, workspaceId);
+        await client.invalidateQueries({
+          queryKey: workspaceKeys.academicRecords(workspaceId),
+        });
+        await refresh();
+      },
+    }),
+    update: useMutation({
+      mutationFn: ({
+        id,
+        input,
+      }: {
+        id: string;
+        input: Parameters<typeof recordsApi.updateGradingScheme>[2];
+      }) => recordsApi.updateGradingScheme(workspaceId, id, input),
+      retry: false,
+      onSuccess: async (scheme) => {
+        client.setQueryData(
+          workspaceKeys.gradingScheme(workspaceId, scheme.id),
+          scheme,
+        );
+        bumpAcademicRevision(client, workspaceId);
+        await client.invalidateQueries({
+          queryKey: workspaceKeys.academicRecords(workspaceId),
+        });
+        await refresh();
+      },
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) =>
+        recordsApi.removeGradingScheme(workspaceId, id),
+      retry: false,
+      onSuccess: async (_, id) => {
+        client.removeQueries({
+          queryKey: workspaceKeys.gradingScheme(workspaceId, id),
+          exact: true,
+        });
+        bumpAcademicRevision(client, workspaceId);
+        await client.invalidateQueries({
+          queryKey: workspaceKeys.academicRecords(workspaceId),
         });
         await refresh();
       },
@@ -156,6 +252,103 @@ export function useResolveCourseOffering(workspaceId: string) {
   });
 }
 
+export function useUpdateCourseOfferingConfiguration(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: Parameters<typeof recordsApi.updateCourseOfferingConfiguration>[2];
+    }) => recordsApi.updateCourseOfferingConfiguration(workspaceId, id, input),
+    retry: false,
+    onSuccess: async (offering) => {
+      client.setQueryData<CourseOffering>(
+        workspaceKeys.courseOffering(workspaceId, offering.id),
+        offering,
+      );
+      bumpAcademicRevision(client, workspaceId);
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: workspaceKeys.courseOfferings(workspaceId),
+          exact: true,
+        }),
+        client.invalidateQueries({
+          queryKey: workspaceKeys.results(workspaceId),
+          exact: true,
+        }),
+        client.invalidateQueries({
+          queryKey: workspaceKeys.academicRecords(workspaceId),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useCalculateGpa(workspaceId: string) {
+  return useMutation({
+    mutationFn: (input: Parameters<typeof recordsApi.calculateGpa>[1]) =>
+      recordsApi.calculateGpa(workspaceId, input),
+    retry: false,
+  });
+}
+
+export function useSaveGpa(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof recordsApi.saveGpa>[1]) =>
+      recordsApi.saveGpa(workspaceId, input),
+    retry: false,
+    onSuccess: async (response) => {
+      if (!response.ready || !("summary" in response)) return;
+      await client.invalidateQueries({
+        queryKey: workspaceKeys.academicRecord(
+          workspaceId,
+          response.summary.studentId,
+        ),
+        exact: true,
+      });
+    },
+  });
+}
+
+export function useSaveBatchGpa(workspaceId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof recordsApi.saveBatchGpa>[1]) =>
+      recordsApi.saveBatchGpa(workspaceId, input),
+    retry: false,
+    onSuccess: async (response) => {
+      if (!response.ready || !("savedSummaries" in response)) return;
+      await Promise.all(
+        response.savedSummaries.map((summary) =>
+          client.invalidateQueries({
+            queryKey: workspaceKeys.academicRecord(
+              workspaceId,
+              summary.studentId,
+            ),
+            exact: true,
+          }),
+        ),
+      );
+    },
+  });
+}
+
+export function useStudentAcademicRecord(
+  workspaceId: string,
+  studentId: string,
+) {
+  return useQuery({
+    queryKey: workspaceKeys.academicRecord(workspaceId, studentId),
+    queryFn: ({ signal }) =>
+      recordsApi.studentAcademicRecord(workspaceId, studentId, signal),
+    enabled: Boolean(workspaceId && studentId),
+    meta: { requiresAuth: true },
+  });
+}
+
 export function useResults(workspaceId: string) {
   return useQuery({
     queryKey: workspaceKeys.results(workspaceId),
@@ -168,7 +361,15 @@ export function useResults(workspaceId: string) {
 export function useResultMutations(workspaceId: string) {
   const client = useQueryClient();
   const refresh = () =>
-    client.invalidateQueries({ queryKey: workspaceKeys.results(workspaceId) });
+    Promise.all([
+      client.invalidateQueries({
+        queryKey: workspaceKeys.results(workspaceId),
+        exact: true,
+      }),
+      client.invalidateQueries({
+        queryKey: workspaceKeys.academicRecords(workspaceId),
+      }),
+    ]);
   return {
     create: useMutation({
       mutationFn: (input: Parameters<typeof recordsApi.createResult>[1]) =>
@@ -179,6 +380,7 @@ export function useResultMutations(workspaceId: string) {
           workspaceKeys.result(workspaceId, result.id),
           result,
         );
+        bumpAcademicRevision(client, workspaceId);
         await refresh();
       },
     }),
@@ -196,18 +398,30 @@ export function useResultMutations(workspaceId: string) {
           workspaceKeys.result(workspaceId, result.id),
           result,
         );
+        bumpAcademicRevision(client, workspaceId);
         await refresh();
       },
     }),
     remove: useMutation({
-      mutationFn: (id: string) => recordsApi.removeResult(workspaceId, id),
+      mutationFn: ({ id }: { id: string; studentId: string }) =>
+        recordsApi.removeResult(workspaceId, id),
       retry: false,
-      onSuccess: async (_, id) => {
+      onSuccess: async (_, { id, studentId }) => {
         client.removeQueries({
           queryKey: workspaceKeys.result(workspaceId, id),
           exact: true,
         });
-        await refresh();
+        bumpAcademicRevision(client, workspaceId);
+        await Promise.all([
+          client.invalidateQueries({
+            queryKey: workspaceKeys.results(workspaceId),
+            exact: true,
+          }),
+          client.invalidateQueries({
+            queryKey: workspaceKeys.academicRecord(workspaceId, studentId),
+            exact: true,
+          }),
+        ]);
       },
     }),
   };

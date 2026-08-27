@@ -70,14 +70,14 @@ export default function Hero() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href="/register"
-                className="focus-ring inline-flex min-h-12 items-center gap-2 rounded-full bg-blue-600 px-5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+                className="focus-ring inline-flex min-h-12 items-center gap-2 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white transition-transform duration-150 hover:-translate-y-0.5"
               >
                 Register account
                 <ArrowRight aria-hidden="true" size={17} />
               </Link>
               <Link
                 href="/workflow"
-                className="focus-ring inline-flex min-h-12 items-center gap-2 rounded-full border border-white/25 bg-black/10 px-5 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/10"
+                className="focus-ring inline-flex min-h-12 items-center gap-2 rounded-md border border-white/25 bg-black/10 px-5 text-sm font-semibold text-white backdrop-blur-sm transition-colors duration-150 hover:bg-white/10"
               >
                 See workflow
                 <ArrowDownRight aria-hidden="true" size={17} />

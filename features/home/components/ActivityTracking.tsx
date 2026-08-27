@@ -5,8 +5,11 @@ import { CircleArrow, Eyebrow } from "./ui";
 export default function ActivityTracking() {
   return (
     <section id="features" className="bg-cream py-20 lg:py-28">
-      <div data-reveal="children" className="mx-auto grid max-w-6xl gap-10 px-6 md:px-10 lg:grid-cols-2 lg:items-center">
-        <div className="group relative min-h-[420px] overflow-hidden rounded-4xl sm:min-h-[520px] lg:h-full">
+      <div
+        data-reveal="children"
+        className="mx-auto grid max-w-6xl gap-10 px-6 md:px-10 lg:grid-cols-2 lg:items-center"
+      >
+        <div className="group relative min-h-[420px] overflow-hidden rounded-lg sm:min-h-[520px] lg:h-full">
           <div className="absolute inset-0 z-0">
             <Image
               src="/lecturers.jpg"
@@ -53,7 +56,7 @@ export default function ActivityTracking() {
             <Link
               href="/workflow"
               aria-label="Explore the AureScore workflow"
-              className="focus-ring rounded-full"
+              className="focus-ring rounded-md"
             >
               <CircleArrow />
             </Link>

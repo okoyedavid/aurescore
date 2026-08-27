@@ -6,13 +6,13 @@ This first release supports confidential server-rendered or backend-for-frontend
 
 ## Endpoints
 
-| Purpose | Development | Production |
-| --- | --- | --- |
-| Discovery | `http://localhost:5000/.well-known/openid-configuration` | `https://api.aurescore.okoyedavid.com/.well-known/openid-configuration` |
-| Authorization | `http://localhost:5000/api/oauth/authorize` | `https://api.aurescore.okoyedavid.com/api/oauth/authorize` |
-| Token | `http://localhost:5000/api/oauth/token` | `https://api.aurescore.okoyedavid.com/api/oauth/token` |
-| UserInfo | `http://localhost:5000/api/oauth/userinfo` | `https://api.aurescore.okoyedavid.com/api/oauth/userinfo` |
-| JWKS | `http://localhost:5000/api/oauth/jwks` | `https://api.aurescore.okoyedavid.com/api/oauth/jwks` |
+| Purpose       | Development                                              | Production                                                              |
+| ------------- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Discovery     | `http://localhost:5000/.well-known/openid-configuration` | `https://api.aurescore.okoyedavid.com/.well-known/openid-configuration` |
+| Authorization | `http://localhost:5000/api/oauth/authorize`              | `https://api.aurescore.okoyedavid.com/api/oauth/authorize`              |
+| Token         | `http://localhost:5000/api/oauth/token`                  | `https://api.aurescore.okoyedavid.com/api/oauth/token`                  |
+| UserInfo      | `http://localhost:5000/api/oauth/userinfo`               | `https://api.aurescore.okoyedavid.com/api/oauth/userinfo`               |
+| JWKS          | `http://localhost:5000/api/oauth/jwks`                   | `https://api.aurescore.okoyedavid.com/api/oauth/jwks`                   |
 
 Use discovery instead of hard-coding the protocol endpoints where your OIDC library supports it. The configured `OIDC_ISSUER` must exactly match the issuer used by clients.
 
@@ -95,11 +95,11 @@ The access token is opaque, expires after ten minutes, and currently has no refr
 
 ## Scopes and claims
 
-| Scope | Claims |
-| --- | --- |
-| `openid` | stable pairwise `sub` for this user/client pair |
+| Scope     | Claims                                               |
+| --------- | ---------------------------------------------------- |
+| `openid`  | stable pairwise `sub` for this user/client pair      |
 | `profile` | `name`, `picture`, and UserInfo `preferred_username` |
-| `email` | `email`, `email_verified` |
+| `email`   | `email`, `email_verified`                            |
 
 The same Aurescore user has a different `sub` at a different OAuth client. Use `(issuer, sub)` as the external identity key; do not use email as the durable account key.
 

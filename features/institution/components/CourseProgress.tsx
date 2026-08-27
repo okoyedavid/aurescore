@@ -1,8 +1,83 @@
 import { MoreHorizontal } from "lucide-react";
 import { courses } from "../data";
 
-const tones: Record<string, string> = { green: "text-emerald-500", orange: "text-orange", blue: "text-blue-500", gray: "text-[var(--app-muted)]" };
+const tones: Record<string, string> = {
+  green: "text-emerald-500",
+  orange: "text-orange",
+  blue: "text-blue-500",
+  gray: "text-[var(--app-muted)]",
+};
 
 export default function CourseProgress() {
-  return <section className="app-panel overflow-hidden rounded-lg border border-[var(--app-border)]"><div className="flex items-center justify-between border-b border-[var(--app-border)] px-5 py-4"><div><h2 className="font-display text-lg font-semibold">Course result progress</h2><p className="mt-1 text-xs text-[var(--app-muted)]">Current department workload</p></div><button type="button" aria-label="More course actions" className="focus-ring flex h-9 w-9 items-center justify-center rounded-md hover:bg-[var(--app-hover)]"><MoreHorizontal size={18}/></button></div><div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left"><thead className="bg-[var(--app-hover)] text-[10px] uppercase tracking-[0.12em] text-[var(--app-muted)]"><tr><th className="px-5 py-3 font-semibold">Course</th><th className="px-5 py-3 font-semibold">Lecturer</th><th className="px-5 py-3 font-semibold">Completion</th><th className="px-5 py-3 font-semibold">Status</th></tr></thead><tbody>{courses.map((course)=><tr key={course.code} className="border-t border-[var(--app-border)] text-sm"><td className="px-5 py-4"><p className="font-semibold">{course.code}</p><p className="mt-1 text-xs text-[var(--app-muted)]">{course.name}</p></td><td className="px-5 py-4 text-xs text-[var(--app-muted)]">{course.owner}</td><td className="px-5 py-4"><div className="flex items-center gap-3"><div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--app-hover)]"><div className="h-full rounded-full bg-blue-600" style={{width:`${course.progress}%`}}/></div><span className="text-xs font-semibold">{course.progress}%</span></div></td><td className="px-5 py-4"><span className={`inline-flex rounded-full bg-[var(--app-hover)] px-2.5 py-1 text-[10px] font-semibold ${tones[course.tone]}`}>{course.status}</span></td></tr>)}</tbody></table></div></section>;
+  return (
+    <section className="app-panel overflow-hidden rounded-lg border border-[var(--app-border)]">
+      <div className="flex items-center justify-between border-b border-[var(--app-border)] px-5 py-4">
+        <div>
+          <h2 className="font-display text-lg font-semibold">
+            Course result progress
+          </h2>
+          <p className="mt-1 text-xs text-[var(--app-muted)]">
+            Current department workload
+          </p>
+        </div>
+        <button
+          type="button"
+          aria-label="More course actions"
+          className="focus-ring flex h-9 w-9 items-center justify-center rounded-md hover:bg-[var(--app-hover)]"
+        >
+          <MoreHorizontal size={18} />
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[680px] text-left">
+          <thead className="bg-[var(--app-hover)] text-[10px] uppercase tracking-[0.12em] text-[var(--app-muted)]">
+            <tr>
+              <th className="px-5 py-3 font-semibold">Course</th>
+              <th className="px-5 py-3 font-semibold">Lecturer</th>
+              <th className="px-5 py-3 font-semibold">Completion</th>
+              <th className="px-5 py-3 font-semibold">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {courses.map((course) => (
+              <tr
+                key={course.code}
+                className="border-t border-[var(--app-border)] text-sm"
+              >
+                <td className="px-5 py-4">
+                  <p className="font-semibold">{course.code}</p>
+                  <p className="mt-1 text-xs text-[var(--app-muted)]">
+                    {course.name}
+                  </p>
+                </td>
+                <td className="px-5 py-4 text-xs text-[var(--app-muted)]">
+                  {course.owner}
+                </td>
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--app-hover)]">
+                      <div
+                        className="h-full rounded-full bg-blue-600"
+                        style={{ width: `${course.progress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-semibold">
+                      {course.progress}%
+                    </span>
+                  </div>
+                </td>
+                <td className="px-5 py-4">
+                  <span
+                    className={`inline-flex rounded-full bg-[var(--app-hover)] px-2.5 py-1 text-[10px] font-semibold ${tones[course.tone]}`}
+                  >
+                    {course.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
 }

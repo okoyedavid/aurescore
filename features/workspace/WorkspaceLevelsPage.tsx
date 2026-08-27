@@ -86,7 +86,7 @@ function Levels({ workspaceId }: { workspaceId: string }) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-2xl font-semibold">Levels</h2>
-          <p className="mt-1 text-sm text-[var(--app-muted)]">
+          <p className="mt-1 text-xs text-[var(--app-muted)]">
             Ordered levels appear first.
           </p>
         </div>
@@ -101,11 +101,11 @@ function Levels({ workspaceId }: { workspaceId: string }) {
           Add level
         </Button>
       </div>
-      {query.isPending && <Skeleton className="mt-5 h-52 rounded-xl" />}
+      {query.isPending && <Skeleton className="mt-5 h-52 rounded-none" />}
       {query.isError && (
         <section
           role="alert"
-          className="app-panel mt-5 rounded-xl border border-[var(--app-border)] p-5"
+          className="app-panel mt-5 border border-[var(--app-border)] p-5"
         >
           <p>{normalizeApiError(query.error).message}</p>
           <button
@@ -117,15 +117,15 @@ function Levels({ workspaceId }: { workspaceId: string }) {
         </section>
       )}
       {query.data?.length === 0 && (
-        <p className="app-panel mt-5 rounded-xl border border-dashed border-[var(--app-border)] p-10 text-center text-sm text-[var(--app-muted)]">
+        <p className="app-panel mt-5 border border-dashed border-[var(--app-border)] p-10 text-center text-xs text-[var(--app-muted)]">
           No levels yet.
         </p>
       )}
-      <ul className="mt-5 grid gap-3 md:grid-cols-2">
+      <ul className="mt-5 grid border-l border-t border-[var(--app-border)] md:grid-cols-2">
         {query.data?.map((item) => (
           <li
             key={item.id}
-            className="app-panel flex items-start gap-4 rounded-xl border border-[var(--app-border)] p-5"
+            className="app-panel flex items-start gap-4 border-b border-r border-[var(--app-border)] p-5"
           >
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold">{item.name}</h3>

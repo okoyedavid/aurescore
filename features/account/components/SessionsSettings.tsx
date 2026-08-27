@@ -140,7 +140,7 @@ export default function SessionsSettings() {
               return (
                 <article
                   key={session.userSessionId}
-                  className="rounded-lg border border-[var(--app-border)] p-4 sm:p-5"
+                  className="border border-[var(--app-border)] p-4 sm:p-5"
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[var(--app-hover)]">

@@ -31,6 +31,7 @@ const workspace: WorkspaceDetails = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-02T00:00:00.000Z",
   sessions: [],
+  terms: [],
   levels: [],
   courses: [],
 };
@@ -113,6 +114,25 @@ describe("workspace forms", () => {
       levels: [{ name: "Level 100", code: "100L", order: 100 }],
     });
     expect(apiMock.history.post[0].data).not.toContain("courses");
+  });
+  it("generates editable reusable Term rows and submits them once at workspace creation", async () => {
+    apiMock.onPost("/workspace").reply(201, workspace);
+    renderClient(<CreateWorkspacePage />);
+    fireEvent.change(screen.getByLabelText("Workspace name"), {
+      target: { value: "Engineering" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Two semesters" }));
+    const termNames = screen.getAllByLabelText("Name");
+    expect(termNames).toHaveLength(2);
+    fireEvent.change(termNames[1], { target: { value: "Rain Semester" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create workspace" }));
+    await waitFor(() => expect(apiMock.history.post).toHaveLength(1));
+    const payload = JSON.parse(apiMock.history.post[0].data);
+    expect(payload.terms).toEqual([
+      { name: "First Semester", code: null, order: 1, metadata: null },
+      { name: "Rain Semester", code: null, order: 2, metadata: null },
+    ]);
+    expect(payload).not.toHaveProperty("termSystem");
   });
   it("focuses validation, announces the date-range error, and submits only once while pending", async () => {
     let resolve: ((value: [number, WorkspaceDetails]) => void) | undefined;

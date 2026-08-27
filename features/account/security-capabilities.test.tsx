@@ -261,21 +261,17 @@ describe("account security capabilities", () => {
     expect(sessionStorage.length).toBe(0);
   });
   it("rejects a reauthentication token bound to another action without retrying", async () => {
-    apiMock
-      .onPost("/account/security-verification/request")
-      .reply(200, {
-        message: "Security code sent.",
-        challengeId: "set-password-challenge",
-      });
+    apiMock.onPost("/account/security-verification/request").reply(200, {
+      message: "Security code sent.",
+      challengeId: "set-password-challenge",
+    });
     apiMock
       .onPost("/account/security-verification/verify")
       .reply(200, { reauthToken: "wrong-action-token", expiresIn: 300 });
-    apiMock
-      .onPatch("/account/password")
-      .reply(400, {
-        code: "REAUTH_ACTION_MISMATCH",
-        message: "This security approval cannot be used for that action.",
-      });
+    apiMock.onPatch("/account/password").reply(400, {
+      code: "REAUTH_ACTION_MISMATCH",
+      message: "This security approval cannot be used for that action.",
+    });
     const client = renderWithClient(
       <PasswordSettings user={providerUser} />,
       (query) => query.setQueryData(accountKeys.me, providerUser),

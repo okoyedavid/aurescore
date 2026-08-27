@@ -32,7 +32,10 @@ const footerGroups = [
 export default function Footer() {
   return (
     <footer id="contact" className="bg-ink text-white">
-      <div data-reveal="children" className="mx-auto max-w-6xl px-6 pb-8 pt-20 md:px-10 lg:pt-24">
+      <div
+        data-reveal="children"
+        className="mx-auto max-w-6xl px-6 pb-8 pt-20 md:px-10 lg:pt-24"
+      >
         <div className="grid gap-10 border-b border-white/15 pb-16 lg:grid-cols-[1fr_auto] lg:items-end">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/50">
@@ -46,13 +49,13 @@ export default function Footer() {
           <div className="flex flex-wrap gap-3 lg:justify-end">
             <Link
               href="/register"
-              className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full bg-blue-600 px-6 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+              className="focus-ring inline-flex min-h-12 items-center justify-center rounded-md bg-blue-600 px-6 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-500"
             >
               Register account
             </Link>
             <Link
               href="/workflow"
-              className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 px-6 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              className="focus-ring inline-flex min-h-12 items-center justify-center rounded-md border border-white/20 px-6 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10"
             >
               View workflow
             </Link>
@@ -111,7 +114,10 @@ export default function Footer() {
         <div className="mt-8 flex flex-col gap-4 border-t border-white/15 pt-6 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
           <span>&copy; 2026 AureScore. All rights reserved.</span>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
-            <Link href="/privacy" className="focus-ring rounded hover:text-white">
+            <Link
+              href="/privacy"
+              className="focus-ring rounded hover:text-white"
+            >
               Privacy
             </Link>
             <Link href="/terms" className="focus-ring rounded hover:text-white">

@@ -51,21 +51,23 @@ export default function CreateOAuthClientPage() {
   }
   const backend = create.isError ? normalizeApiError(create.error) : null;
   return (
-    <div className="mx-auto max-w-3xl px-5 py-8 md:px-8 md:py-12">
-      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">
-        Developer
-      </p>
-      <h1 className="mt-2 font-display text-4xl font-semibold">
-        Create an OAuth application
-      </h1>
-      <p className="mt-3 text-sm text-[var(--app-muted)]">
-        Redirect URI matching is exact. This release supports confidential
-        server-side web clients only.
-      </p>
+    <div className="mx-auto w-full max-w-[1500px] px-[clamp(20px,4.5vw,72px)] pb-[72px] pt-[clamp(28px,4vw,58px)] max-[900px]:px-5 max-[900px]:pb-14 max-[900px]:pt-7">
+      <header className="border-b border-[var(--app-border)] pb-6">
+        <p className="mb-2 text-[10px] font-bold uppercase leading-normal tracking-[0.13em] text-blue-600">
+          Developer
+        </p>
+        <h1 className="m-0 font-display text-[clamp(38px,4vw,50px)] font-medium leading-none tracking-[-0.045em] max-[650px]:text-[39px]">
+          Create an OAuth application
+        </h1>
+        <p className="mt-2.5 max-w-[660px] text-xs leading-normal text-[var(--app-muted)]">
+          Redirect URI matching is exact. This release supports confidential
+          server-side web clients only.
+        </p>
+      </header>
       <form
         onSubmit={submit}
         noValidate
-        className="app-panel mt-8 space-y-6 rounded-xl border border-[var(--app-border)] p-6 md:p-8"
+        className="app-panel mt-8 max-w-3xl space-y-6 border border-[var(--app-border)] p-6 md:p-8"
       >
         <label className="block text-sm font-semibold">
           Application name

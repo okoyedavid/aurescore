@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { normalizeApiError } from "@/lib/api/errors";
 import WorkspaceChrome from "./components/WorkspaceChrome";
 import { FieldError, RequestError } from "./components/FieldError";
+import TermsManager from "./components/TermsManager";
 import { useSessionMutations, useSessions } from "./hooks";
 import type { WorkspaceSession } from "./types";
 import {
@@ -88,7 +89,7 @@ function Sessions({ workspaceId }: { workspaceId: string }) {
           <h2 className="font-display text-2xl font-semibold">
             Academic sessions
           </h2>
-          <p className="mt-1 text-sm text-[var(--app-muted)]">
+          <p className="mt-1 text-xs text-[var(--app-muted)]">
             Dates are shown in your locale without shifting the selected day.
           </p>
         </div>
@@ -106,14 +107,14 @@ function Sessions({ workspaceId }: { workspaceId: string }) {
       <RequestError>{error || undefined}</RequestError>
       {query.isPending && (
         <div className="mt-5 space-y-3">
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-24 rounded-none" />
+          <Skeleton className="h-24 rounded-none" />
         </div>
       )}
       {query.isError && (
         <section
           role="alert"
-          className="app-panel mt-5 rounded-xl border border-[var(--app-border)] p-5"
+          className="app-panel mt-5 border border-[var(--app-border)] p-5"
         >
           <p>{normalizeApiError(query.error).message}</p>
           <button
@@ -125,15 +126,15 @@ function Sessions({ workspaceId }: { workspaceId: string }) {
         </section>
       )}
       {query.data?.length === 0 && (
-        <p className="app-panel mt-5 rounded-xl border border-dashed border-[var(--app-border)] p-10 text-center text-sm text-[var(--app-muted)]">
+        <p className="app-panel mt-5 border border-dashed border-[var(--app-border)] p-10 text-center text-xs text-[var(--app-muted)]">
           No sessions yet.
         </p>
       )}
-      <ul className="mt-5 space-y-3">
+      <ul className="mt-5 border-l border-t border-[var(--app-border)]">
         {query.data?.map((item) => (
           <li
             key={item.id}
-            className="app-panel flex flex-col gap-4 rounded-xl border border-[var(--app-border)] p-5 sm:flex-row sm:items-center"
+            className="app-panel flex flex-col gap-4 border-b border-r border-[var(--app-border)] p-5 sm:flex-row sm:items-center"
           >
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold">{item.name}</h3>
@@ -167,6 +168,7 @@ function Sessions({ workspaceId }: { workspaceId: string }) {
           </li>
         ))}
       </ul>
+      <TermsManager workspaceId={workspaceId} />
       <Dialog
         open={editing !== undefined}
         onClose={() => !mutation.isPending && setEditing(undefined)}

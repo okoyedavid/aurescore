@@ -25,7 +25,7 @@ export default function OneTimeSecretDialog({
       description="This is the only time AureScore will show the complete secret. Store it in your server-side secret manager."
       onClose={() => undefined}
     >
-      <div className="rounded-lg border border-[var(--app-border)] bg-[var(--app-hover)] p-4">
+      <div className="rounded-sm border border-[var(--app-border)] bg-[var(--app-hover)] p-4">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <KeyRound size={17} />
           Client secret

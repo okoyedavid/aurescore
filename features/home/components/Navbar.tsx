@@ -89,7 +89,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           <Link
             href="/sign-in"
-            className="focus-ring inline-flex min-h-12 items-center justify-center rounded-full border border-white/20 px-6 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+            className="focus-ring inline-flex min-h-12 items-center justify-center rounded-md border border-white/20 px-6 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/10"
           >
             Sign In
           </Link>
@@ -135,7 +135,7 @@ export default function Navbar() {
               tabIndex={isOpen ? 0 : -1}
               aria-label="Close navigation"
               onClick={closeMenu}
-              className="focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10"
+              className="focus-ring flex h-10 w-10 items-center justify-center rounded-md border border-white/20 text-white transition-colors duration-150 hover:bg-white/10"
             >
               <X aria-hidden="true" size={20} strokeWidth={1.8} />
             </button>
@@ -148,7 +148,7 @@ export default function Navbar() {
                 href={link.href}
                 tabIndex={isOpen ? 0 : -1}
                 onClick={closeMenu}
-                className="nav-panel-link focus-ring group grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border-b border-white/10 py-4"
+                className="nav-panel-link focus-ring group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/10 py-4"
                 style={{
                   transitionDelay: isOpen ? `${80 + index * 45}ms` : "0ms",
                 }}
@@ -175,7 +175,7 @@ export default function Navbar() {
               href="/register"
               tabIndex={isOpen ? 0 : -1}
               onClick={closeMenu}
-              className="focus-ring flex min-h-12 items-center justify-center rounded-full bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+              className="focus-ring flex min-h-12 items-center justify-center rounded-md bg-blue-600 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-blue-500"
             >
               Register account
             </Link>

@@ -5,4 +5,6 @@ export const metadata: Metadata = {
   title: "Register | AureScore",
   description: "Create your AureScore account.",
 };
-export default function Page() { return <RegisterPage />; }
+export default function Page() {
+  return <RegisterPage />;
+}

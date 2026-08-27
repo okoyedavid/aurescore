@@ -47,16 +47,16 @@ export default function AccountSettingsPage({
 
   return (
     <AppShell area="dashboard">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto w-full max-w-[1500px] px-[clamp(20px,4.5vw,72px)] pb-[72px] pt-[clamp(28px,4vw,58px)] max-[900px]:px-5 max-[900px]:pb-14 max-[900px]:pt-7">
+        <header className="flex flex-col gap-3 border-b border-[var(--app-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-500">
+            <p className="mb-2 text-[10px] font-bold uppercase leading-normal tracking-[0.13em] text-blue-600">
               Account settings
             </p>
-            <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">
+            <h1 className="m-0 font-display text-[clamp(38px,4vw,50px)] font-medium leading-none tracking-[-0.045em] max-[650px]:text-[39px]">
               Settings
             </h1>
-            <p className="mt-2 text-sm text-[var(--app-muted)]">
+            <p className="mt-2.5 max-w-[660px] text-xs leading-normal text-[var(--app-muted)]">
               Manage your profile, login security, sessions, and account
               history.
             </p>
@@ -66,11 +66,11 @@ export default function AccountSettingsPage({
               Refreshing account…
             </p>
           )}
-        </div>
+        </header>
         <div className="mt-8 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
           <nav
             aria-label="Account settings"
-            className="app-panel flex gap-1 overflow-x-auto rounded-xl border border-[var(--app-border)] p-2 lg:block lg:space-y-1 lg:self-start"
+            className="app-panel flex gap-1 overflow-x-auto border border-[var(--app-border)] p-2 lg:block lg:space-y-1 lg:self-start"
           >
             {sections.map(({ id, label, icon: Icon }) => (
               <button
@@ -78,7 +78,7 @@ export default function AccountSettingsPage({
                 type="button"
                 onClick={() => setActive(id)}
                 aria-current={active === id ? "page" : undefined}
-                className={`focus-ring flex min-h-11 shrink-0 items-center gap-3 rounded-md px-3 text-left text-sm transition-colors lg:w-full ${active === id ? "bg-[var(--app-active)] font-semibold text-[var(--app-text)]" : "text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)]"}`}
+                className={`focus-ring flex min-h-10 shrink-0 items-center gap-3 rounded-sm px-3 text-left text-xs transition-colors lg:w-full ${active === id ? "bg-[var(--app-active)] font-semibold text-[var(--app-text)]" : "text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)]"}`}
               >
                 <Icon size={17} />
                 <span>{label}</span>

@@ -20,13 +20,7 @@ import {
   validateSession,
   type FieldErrors,
 } from "./validation";
-import {
-  buildWorkspacePatch,
-  type WideCourseRow,
-  type WideLevelRow,
-  type WideSessionRow,
-  type WideValues,
-} from "./wide-patch";
+import { buildWorkspacePatch, type WideValues } from "./wide-patch";
 
 let newKey = 0;
 const courseTypes: CourseType[] = [
@@ -60,6 +54,8 @@ function initial(workspace: WorkspaceDetails): WideValues {
       name: item.name,
       code: item.code ?? "",
       type: item.type,
+      defaultLevelId: item.defaultLevelId ?? "",
+      defaultTermId: item.defaultTermId ?? "",
     })),
   };
 }
@@ -144,7 +140,7 @@ function Editor({ workspace }: { workspace: WorkspaceDetails }) {
       <h2 className="font-display text-2xl font-semibold">
         Transactional wide edit
       </h2>
-      <p className="mt-2 max-w-3xl text-sm text-[var(--app-muted)]">
+      <p className="mt-2 max-w-3xl text-xs text-[var(--app-muted)]">
         Save several intentional creates and updates as one atomic request.
         Existing rows are never deleted here; omitted fields and rows remain
         unchanged.
@@ -155,7 +151,7 @@ function Editor({ workspace }: { workspace: WorkspaceDetails }) {
         noValidate
         className="mt-6 space-y-8"
       >
-        <section className="app-panel space-y-4 rounded-xl border border-[var(--app-border)] p-5 sm:p-6">
+        <section className="app-panel space-y-4 border border-[var(--app-border)] p-5 sm:p-6">
           <h3 className="font-display text-xl font-semibold">
             Workspace details
           </h3>
@@ -202,7 +198,7 @@ function Editor({ workspace }: { workspace: WorkspaceDetails }) {
           {values.sessions.map((row, index) => (
             <div
               key={row.key}
-              className="rounded-lg border border-[var(--app-border)] p-4"
+              className="rounded-sm border border-[var(--app-border)] p-4"
             >
               <RowHeading
                 label={row.id ? "Existing session" : "New session"}
@@ -278,7 +274,7 @@ function Editor({ workspace }: { workspace: WorkspaceDetails }) {
           {values.levels.map((row, index) => (
             <div
               key={row.key}
-              className="rounded-lg border border-[var(--app-border)] p-4"
+              className="rounded-sm border border-[var(--app-border)] p-4"
             >
               <RowHeading
                 label={row.id ? "Existing level" : "New level"}
@@ -325,7 +321,14 @@ function Editor({ workspace }: { workspace: WorkspaceDetails }) {
               ...v,
               courses: [
                 ...v.courses,
-                { key: `new-${++newKey}`, name: "", code: "", type: "COURSE" },
+                {
+                  key: `new-${++newKey}`,
+                  name: "",
+                  code: "",
+                  type: "COURSE",
+                  defaultLevelId: "",
+                  defaultTermId: "",
+                },
               ],
             }))
           }
@@ -333,7 +336,7 @@ function Editor({ workspace }: { workspace: WorkspaceDetails }) {
           {values.courses.map((row, index) => (
             <div
               key={row.key}
-              className="rounded-lg border border-[var(--app-border)] p-4"
+              className="rounded-sm border border-[var(--app-border)] p-4"
             >
               <RowHeading
                 label={row.id ? "Existing course" : "New course"}
@@ -342,7 +345,7 @@ function Editor({ workspace }: { workspace: WorkspaceDetails }) {
                   !row.id ? () => removeNew("courses", row.key) : undefined
                 }
               />
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <label className="text-sm">
                   Name
                   <Input
@@ -402,6 +405,54 @@ function Editor({ workspace }: { workspace: WorkspaceDetails }) {
                     ))}
                   </Select>
                 </label>
+                <label className="text-sm">
+                  Default level
+                  <Select
+                    value={row.defaultLevelId}
+                    onChange={(e) =>
+                      setValues((v) => ({
+                        ...v,
+                        courses: v.courses.map((item) =>
+                          item.key === row.key
+                            ? { ...item, defaultLevelId: e.target.value }
+                            : item,
+                        ),
+                      }))
+                    }
+                    className="mt-1"
+                  >
+                    <option value="">No default</option>
+                    {workspace.levels.map((level) => (
+                      <option key={level.id} value={level.id}>
+                        {level.name}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
+                <label className="text-sm">
+                  Default term
+                  <Select
+                    value={row.defaultTermId}
+                    onChange={(e) =>
+                      setValues((v) => ({
+                        ...v,
+                        courses: v.courses.map((item) =>
+                          item.key === row.key
+                            ? { ...item, defaultTermId: e.target.value }
+                            : item,
+                        ),
+                      }))
+                    }
+                    className="mt-1"
+                  >
+                    <option value="">No default</option>
+                    {workspace.terms.map((term) => (
+                      <option key={term.id} value={term.id}>
+                        {term.name}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
               </div>
             </div>
           ))}
@@ -445,7 +496,7 @@ function WideSection({
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="app-panel rounded-xl border border-[var(--app-border)] p-5 sm:p-6">
+    <fieldset className="app-panel border border-[var(--app-border)] p-5 sm:p-6">
       <div className="flex items-center justify-between">
         <legend className="font-display text-xl font-semibold">{title}</legend>
         <button

@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useMemo, useRef, useState } from "react";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/FormField";
@@ -35,7 +36,8 @@ function Students({ workspaceId }: { workspaceId: string }) {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (locked.current || mutation.isPending) return;
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const matric = String(data.get("matricNumber") ?? "").trim();
     const input = {
       name: String(data.get("name") ?? "").trim(),
@@ -46,9 +48,7 @@ function Students({ workspaceId }: { workspaceId: string }) {
     mutation.reset();
     if (Object.keys(next).length) {
       requestAnimationFrame(() =>
-        event.currentTarget
-          .querySelector<HTMLElement>("[aria-invalid='true']")
-          ?.focus(),
+        form.querySelector<HTMLElement>("[aria-invalid='true']")?.focus(),
       );
       return;
     }
@@ -69,7 +69,7 @@ function Students({ workspaceId }: { workspaceId: string }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-2xl font-semibold">Students</h2>
-          <p className="mt-1 text-sm text-[var(--app-muted)]">
+          <p className="mt-1 text-xs text-[var(--app-muted)]">
             Students are workspace records and can participate in many
             offerings.
           </p>
@@ -98,7 +98,7 @@ function Students({ workspaceId }: { workspaceId: string }) {
           className="pl-10"
         />
       </label>
-      {query.isPending && <Skeleton className="mt-5 h-52 rounded-xl" />}
+      {query.isPending && <Skeleton className="mt-5 h-52 rounded-none" />}
       <RequestError>
         {query.isError
           ? normalizeApiError(query.error).status === 404
@@ -107,7 +107,7 @@ function Students({ workspaceId }: { workspaceId: string }) {
           : undefined}
       </RequestError>
       {query.data?.length === 0 && (
-        <div className="app-panel mt-5 rounded-xl border border-dashed border-[var(--app-border)] p-10 text-center">
+        <div className="app-panel mt-5 border border-dashed border-[var(--app-border)] p-10 text-center">
           <p className="text-sm text-[var(--app-muted)]">
             No students yet. Add a student to prepare for result entry.
           </p>
@@ -118,7 +118,7 @@ function Students({ workspaceId }: { workspaceId: string }) {
           No students match “{search}”.
         </p>
       )}
-      <ul className="mt-5 divide-y divide-[var(--app-border)] overflow-hidden rounded-xl border border-[var(--app-border)]">
+      <ul className="mt-5 divide-y divide-[var(--app-border)] overflow-hidden border border-[var(--app-border)]">
         {students.map((student) => (
           <li
             key={student.id}
@@ -130,6 +130,13 @@ function Students({ workspaceId }: { workspaceId: string }) {
                 {student.matricNumber || "No matric number"}
               </p>
             </div>
+            <Link
+              href={`/workspace/${encodeURIComponent(workspaceId)}/students/${encodeURIComponent(student.id)}/academic-record`}
+              className="app-icon-button"
+              aria-label={`Open academic record for ${student.name}`}
+            >
+              <BookOpen size={16} />
+            </Link>
             <button
               className="app-icon-button"
               aria-label={`Edit ${student.name}`}

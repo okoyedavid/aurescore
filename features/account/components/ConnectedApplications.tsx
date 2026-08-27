@@ -111,7 +111,7 @@ export default function ConnectedApplications() {
           ))}
         </div>
       ) : (
-        <div className="mt-7 rounded-lg border border-dashed border-[var(--app-border)] p-8 text-center">
+        <div className="mt-7 border border-dashed border-[var(--app-border)] p-8 text-center">
           <PlugZap className="mx-auto text-[var(--app-muted)]" />
           <p className="mt-3 font-semibold">No connected applications</p>
           <p className="mt-1 text-sm text-[var(--app-muted)]">

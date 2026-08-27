@@ -132,7 +132,7 @@ function Schemes({ workspaceId }: { workspaceId: string }) {
           <h2 className="font-display text-2xl font-semibold">
             Assessment schemes
           </h2>
-          <p className="mt-1 text-sm text-[var(--app-muted)]">
+          <p className="mt-1 text-xs text-[var(--app-muted)]">
             Reusable component definitions attached when result work begins.
           </p>
         </div>
@@ -149,7 +149,7 @@ function Schemes({ workspaceId }: { workspaceId: string }) {
           </Button>
         </div>
       </div>
-      {query.isPending && <Skeleton className="mt-5 h-52 rounded-xl" />}
+      {query.isPending && <Skeleton className="mt-5 h-52 rounded-none" />}
       {query.isError && (
         <RequestError>
           {normalizeApiError(query.error).status === 404
@@ -158,17 +158,17 @@ function Schemes({ workspaceId }: { workspaceId: string }) {
         </RequestError>
       )}
       {query.data?.length === 0 && (
-        <div className="app-panel mt-5 rounded-xl border border-dashed border-[var(--app-border)] p-10 text-center">
-          <p className="text-sm text-[var(--app-muted)]">
+        <div className="app-panel mt-5 border border-dashed border-[var(--app-border)] p-10 text-center">
+          <p className="text-xs text-[var(--app-muted)]">
             No assessment schemes yet. Create one before entering results.
           </p>
         </div>
       )}
-      <ul className="mt-5 grid gap-3 lg:grid-cols-2">
+      <ul className="mt-5 grid border-l border-t border-[var(--app-border)] lg:grid-cols-2">
         {query.data?.map((scheme) => (
           <li
             key={scheme.id}
-            className="app-panel rounded-xl border border-[var(--app-border)] p-5"
+            className="app-panel border-b border-r border-[var(--app-border)] p-5"
           >
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
@@ -244,7 +244,7 @@ function Schemes({ workspaceId }: { workspaceId: string }) {
             {rows.map((row, index) => (
               <div
                 key={row.rowId}
-                className="rounded-lg border border-[var(--app-border)] p-3"
+                className="rounded-sm border border-[var(--app-border)] p-3"
               >
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-sm font-semibold">
@@ -391,7 +391,7 @@ function Schemes({ workspaceId }: { workspaceId: string }) {
               : undefined}
           </RequestError>
           {immutable && editing && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="rounded-sm border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
               <p>
                 Results already use these components, so changing their
                 historical meaning is protected. Renaming remains available.

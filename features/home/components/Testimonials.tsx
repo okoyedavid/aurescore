@@ -39,8 +39,8 @@ export default function Testimonials() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-4 lg:grid-cols-[1.45fr_1fr]">
-          <article className="flex min-h-[360px] flex-col justify-between rounded-4xl bg-navy-deep p-7 text-white md:p-10">
+        <div className="mt-10 grid gap-px overflow-hidden rounded-lg border border-line bg-line lg:grid-cols-[1.45fr_1fr]">
+          <article className="flex min-h-[360px] flex-col justify-between bg-navy-deep p-7 text-white md:p-10">
             <div className="flex items-center justify-between gap-4 text-xs text-white/60">
               <span>01 / 03</span>
               <span className="rounded-full border border-white/15 px-3 py-1.5">
@@ -54,15 +54,17 @@ export default function Testimonials() {
 
             <div className="border-t border-white/15 pt-5">
               <p className="text-sm font-semibold">{feedback[0].role}</p>
-              <p className="mt-1 text-xs text-white/55">{feedback[0].context}</p>
+              <p className="mt-1 text-xs text-white/55">
+                {feedback[0].context}
+              </p>
             </div>
           </article>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="grid gap-px bg-line sm:grid-cols-2 lg:grid-cols-1">
             {feedback.slice(1).map((item, index) => (
               <article
                 key={item.role}
-                className="flex min-h-[210px] flex-col justify-between rounded-4xl border border-line bg-paper p-6"
+                className="flex min-h-[210px] flex-col justify-between bg-paper p-6"
               >
                 <div className="flex items-center justify-between text-xs text-muted">
                   <span>0{index + 2} / 03</span>

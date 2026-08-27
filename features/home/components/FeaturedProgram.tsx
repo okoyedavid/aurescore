@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Eyebrow } from "./ui";
 import Image from "next/image";
 
@@ -83,9 +84,12 @@ export default function FeaturedProgram() {
   return (
     <section
       id="workflow"
-      className="mx-3 rounded-4xl border border-line bg-white py-20 lg:py-28"
+      className="mx-3 rounded-lg border border-line bg-white py-20 lg:py-28"
     >
-      <div data-reveal="children" className="mx-auto max-w-6xl px-5 sm:px-8 md:px-10">
+      <div
+        data-reveal="children"
+        className="mx-auto max-w-6xl px-5 sm:px-8 md:px-10"
+      >
         <Eyebrow dotColor="bg-blue-600">ACADEMIC WORKFLOW</Eyebrow>
 
         <div className="mt-6 flex flex-col justify-between gap-6 md:flex-row md:items-end">
@@ -115,25 +119,28 @@ export default function FeaturedProgram() {
                 type="button"
                 aria-label="Previous workflow"
                 onClick={goPrev}
-                className="focus-ring flex h-12 w-12 items-center justify-center rounded-full border border-line text-ink transition-colors hover:bg-paper sm:h-15 sm:w-15"
+                className="focus-ring flex h-12 w-12 items-center justify-center rounded-md border border-line text-ink transition-colors duration-150 hover:bg-paper sm:h-15 sm:w-15"
               >
-                ←
+                <ArrowLeft size={18} aria-hidden="true" />
               </button>
 
               <button
                 type="button"
                 aria-label="Next workflow"
                 onClick={goNext}
-                className="focus-ring flex h-12 w-12 items-center justify-center rounded-full bg-ink text-white transition-opacity hover:opacity-90 sm:h-15 sm:w-15"
+                className="focus-ring flex h-12 w-12 items-center justify-center rounded-md bg-ink text-white transition-opacity duration-150 hover:opacity-90 sm:h-15 sm:w-15"
               >
-                →
+                <ArrowRight size={18} aria-hidden="true" />
               </button>
             </div>
           </div>
 
           <div className="grid w-full gap-4 sm:grid-cols-2">
             {/* Workflow statement card */}
-            <div key={`statement-${step.id}`} className="workflow-swap flex min-h-[320px] flex-col justify-between rounded-4xl bg-ink p-6 text-white transition-all duration-300 sm:min-h-[360px]">
+            <div
+              key={`statement-${step.id}`}
+              className="workflow-swap flex min-h-[320px] flex-col justify-between rounded-lg bg-ink p-6 text-white transition-all duration-300 sm:min-h-[360px]"
+            >
               <div>
                 <p className="font-display text-2xl font-medium leading-snug md:text-3xl">
                   {step.statement}
@@ -149,7 +156,10 @@ export default function FeaturedProgram() {
             </div>
             {/* Academic result visual */}
 
-            <div key={`visual-${step.id}`} className="workflow-swap relative min-h-[320px] overflow-hidden rounded-4xl sm:min-h-[360px]">
+            <div
+              key={`visual-${step.id}`}
+              className="workflow-swap relative min-h-[320px] overflow-hidden rounded-lg sm:min-h-[360px]"
+            >
               <div className="absolute inset-0 z-0">
                 <Image
                   src="/process2.jpg"

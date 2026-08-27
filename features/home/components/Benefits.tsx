@@ -32,9 +32,12 @@ export default function Benefits() {
 
   return (
     <section id="solutions" className="py-20 lg:py-28">
-      <div data-reveal="children" className="mx-auto grid max-w-6xl gap-10 px-6 md:px-10 lg:grid-cols-2 lg:gap-6">
+      <div
+        data-reveal="children"
+        className="mx-auto grid max-w-6xl gap-10 px-6 md:px-10 lg:grid-cols-2 lg:gap-6"
+      >
         {/* Left: copy + audience list */}
-        <div className="rounded-4xl">
+        <div>
           <Eyebrow dotColor="bg-blue-600">WHO IT&apos;S FOR</Eyebrow>
 
           <h2 className="mt-4 max-w-md font-display text-4xl font-medium tracking-tight text-ink">
@@ -46,10 +49,10 @@ export default function Benefits() {
             department to an entire university.
           </p>
 
-          <div className="mt-8">
+          <div className="mt-8 grid gap-px overflow-hidden rounded-lg border border-line bg-line">
             {audiences.map((audience) => (
-              <div key={audience.id} className="audience-card group mb-2 rounded-xl bg-paper">
-                <div className="flex gap-5 rounded-xl border border-line bg-background p-5 transition-colors hover:border-ink/20">
+              <div key={audience.id} className="audience-card group bg-paper">
+                <div className="flex gap-5 bg-background p-5 transition-colors duration-150 hover:bg-paper">
                   <span className="font-mono text-xs text-muted">
                     0{audience.id}
                   </span>
@@ -70,7 +73,7 @@ export default function Benefits() {
         </div>
 
         {/* Right: AureScore product card */}
-        <div className="group relative min-h-[460px] overflow-hidden rounded-4xl border border-line bg-paper lg:h-full">
+        <div className="group relative min-h-[460px] overflow-hidden rounded-lg border border-line bg-paper lg:h-full">
           <div className="absolute inset-0 z-0">
             <Image
               src="/benefits_image.jpg"
@@ -100,7 +103,10 @@ export default function Benefits() {
                 Academic Workflows
               </p>
 
-              <Link href="/solutions" className="focus-ring inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-xs font-semibold text-ink transition-opacity hover:opacity-90">
+              <Link
+                href="/solutions"
+                className="focus-ring inline-flex w-fit items-center gap-1.5 rounded-md bg-white px-4 py-2.5 text-xs font-semibold text-ink transition-opacity duration-150 hover:opacity-90"
+              >
                 Explore AureScore <span aria-hidden>→</span>
               </Link>
             </div>

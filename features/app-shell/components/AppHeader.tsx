@@ -1,25 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Bell,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  Moon,
-  Search,
-  Sun,
-  UserRound,
-} from "lucide-react";
+import { Bell, Menu, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuthUser } from "@/features/auth/hooks";
-import { useAppShell } from "../AppShellContext";
 import UserAvatar from "./UserAvatar";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 
 export default function AppHeader({ openMenu }: { openMenu: () => void }) {
   const { data: user } = useAuthUser();
-  const { collapsed, theme, toggleCollapsed, toggleTheme } = useAppShell();
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -47,45 +36,19 @@ export default function AppHeader({ openMenu }: { openMenu: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-18 items-center gap-3 border-b border-[var(--app-border)] bg-[var(--app-header)] px-4 backdrop-blur-md sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-[var(--app-border)] bg-[var(--app-header)] px-4 backdrop-blur-md min-[901px]:hidden">
       <button
         type="button"
         aria-label="Open menu"
         onClick={openMenu}
-        className="app-icon-button lg:hidden"
+        className="app-icon-button"
       >
         <Menu size={19} />
       </button>
-      <button
-        type="button"
-        onClick={toggleCollapsed}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="app-icon-button hidden lg:inline-flex"
-      >
-        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-      </button>
-      <div className="relative hidden max-w-sm flex-1 sm:block">
-        <Search
-          size={17}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-muted)]"
-        />
-        <input
-          aria-label="Search"
-          className="h-10 w-full rounded-md border border-[var(--app-border)] bg-[var(--app-panel)] pl-10 pr-4 text-sm text-[var(--app-text)] outline-none placeholder:text-[var(--app-muted)] focus:border-blue-500"
-          placeholder="Search AureScore"
-        />
-      </div>
+      <span className="block font-display text-base font-semibold leading-none">
+        AureScore
+      </span>
       <div className="ml-auto flex items-center gap-2">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Use light mode" : "Use dark mode"}
-          title={theme === "dark" ? "Use light mode" : "Use dark mode"}
-          className="app-icon-button"
-        >
-          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
         <button
           type="button"
           aria-label="Notifications"

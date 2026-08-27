@@ -2,9 +2,12 @@ import { apiClient } from "@/lib/api/client";
 import { normalizeApiError } from "@/lib/api/errors";
 import type {
   CourseInput,
+  CourseFilters,
   CreateWorkspaceInput,
   LevelInput,
   SessionInput,
+  Term,
+  TermInput,
   WorkspaceCourse,
   WorkspaceDetails,
   WorkspaceLevel,
@@ -23,7 +26,6 @@ async function request<T>(operation: Promise<{ data: T }>) {
 
 const workspacePath = (workspaceId: string) =>
   `/workspace/${encodeURIComponent(workspaceId)}`;
-
 export const workspaceApi = {
   list: (signal?: AbortSignal) =>
     request<WorkspaceSummary[]>(apiClient.get("/workspace", { signal })),
@@ -71,6 +73,36 @@ export const workspaceApi = {
         `${workspacePath(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
       ),
     ),
+  terms: (workspaceId: string, signal?: AbortSignal) =>
+    request<Term[]>(
+      apiClient.get(`${workspacePath(workspaceId)}/terms`, { signal }),
+    ),
+  term: (workspaceId: string, termId: string, signal?: AbortSignal) =>
+    request<Term>(
+      apiClient.get(
+        `${workspacePath(workspaceId)}/terms/${encodeURIComponent(termId)}`,
+        { signal },
+      ),
+    ),
+  createTerm: (workspaceId: string, input: TermInput) =>
+    request<Term>(apiClient.post(`${workspacePath(workspaceId)}/terms`, input)),
+  updateTerm: (
+    workspaceId: string,
+    termId: string,
+    input: Partial<TermInput>,
+  ) =>
+    request<Term>(
+      apiClient.patch(
+        `${workspacePath(workspaceId)}/terms/${encodeURIComponent(termId)}`,
+        input,
+      ),
+    ),
+  removeTerm: (workspaceId: string, termId: string) =>
+    request<void>(
+      apiClient.delete(
+        `${workspacePath(workspaceId)}/terms/${encodeURIComponent(termId)}`,
+      ),
+    ),
   levels: (workspaceId: string, signal?: AbortSignal) =>
     request<WorkspaceLevel[]>(
       apiClient.get(`${workspacePath(workspaceId)}/levels`, { signal }),
@@ -103,9 +135,19 @@ export const workspaceApi = {
         `${workspacePath(workspaceId)}/levels/${encodeURIComponent(levelId)}`,
       ),
     ),
-  courses: (workspaceId: string, signal?: AbortSignal) =>
+  courses: (
+    workspaceId: string,
+    filters: CourseFilters = {},
+    signal?: AbortSignal,
+  ) =>
     request<WorkspaceCourse[]>(
-      apiClient.get(`${workspacePath(workspaceId)}/courses`, { signal }),
+      apiClient.get(`${workspacePath(workspaceId)}/courses`, {
+        signal,
+        params: {
+          ...(filters.levelId ? { levelId: filters.levelId } : {}),
+          ...(filters.termId ? { termId: filters.termId } : {}),
+        },
+      }),
     ),
   course: (workspaceId: string, courseId: string, signal?: AbortSignal) =>
     request<WorkspaceCourse>(

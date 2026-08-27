@@ -17,7 +17,7 @@ export default function CodeBlock({
     window.setTimeout(() => setCopied(false), 2000);
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-white/10 bg-[#0b1220] text-slate-200">
+    <div className="overflow-hidden rounded-sm border border-white/10 bg-[#0b1220] text-slate-200">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
         <span className="text-xs uppercase tracking-wider text-slate-400">
           {language}

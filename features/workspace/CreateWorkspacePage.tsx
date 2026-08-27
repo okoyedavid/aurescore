@@ -13,6 +13,7 @@ import {
   buildCreateWorkspaceInput,
   normalizeLevel,
   normalizeSession,
+  normalizeTerm,
   validateWorkspace,
   type FieldErrors,
 } from "./validation";
@@ -24,6 +25,22 @@ type SessionRow = {
   endsAt: string;
 };
 type LevelRow = { key: number; name: string; code: string; order: string };
+type TermRow = { key: number; name: string; code: string; order: string };
+const termPresets = {
+  "Two semesters": ["First Semester", "Second Semester"],
+  "Three terms": ["First Term", "Second Term", "Third Term"],
+  "Three trimesters": [
+    "First Trimester",
+    "Second Trimester",
+    "Third Trimester",
+  ],
+  "Four quarters": [
+    "First Quarter",
+    "Second Quarter",
+    "Third Quarter",
+    "Fourth Quarter",
+  ],
+} as const;
 let nextKey = 0;
 
 export default function CreateWorkspacePage() {
@@ -33,6 +50,7 @@ export default function CreateWorkspacePage() {
   const formRef = useRef<HTMLFormElement>(null);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [levels, setLevels] = useState<LevelRow[]>([]);
+  const [terms, setTerms] = useState<TermRow[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
 
   function focusFirstError(next: FieldErrors) {
@@ -53,6 +71,7 @@ export default function CreateWorkspacePage() {
       description: String(data.get("description") ?? ""),
       sessions: sessions.map(normalizeSession),
       levels: levels.map(normalizeLevel),
+      terms: terms.map(normalizeTerm),
     });
     const next = validateWorkspace(input);
     setErrors(next);
@@ -80,21 +99,23 @@ export default function CreateWorkspacePage() {
   }
   return (
     <AppShell area="workspace">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:py-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-500">
-          Private workspace
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">
-          Create a workspace
-        </h1>
-        <p className="mt-2 text-sm text-[var(--app-muted)]">
-          Courses can be added after this workspace exists.
-        </p>
+      <div className="mx-auto w-full max-w-[1500px] px-[clamp(20px,4.5vw,72px)] pb-[72px] pt-[clamp(28px,4vw,58px)] max-[900px]:px-5 max-[900px]:pb-14 max-[900px]:pt-7">
+        <header className="border-b border-[var(--app-border)] pb-6">
+          <p className="mb-2 text-[10px] font-bold uppercase leading-normal tracking-[0.13em] text-blue-600">
+            Private workspace
+          </p>
+          <h1 className="m-0 font-display text-[clamp(38px,4vw,50px)] font-medium leading-none tracking-[-0.045em] max-[650px]:text-[39px]">
+            Create a workspace
+          </h1>
+          <p className="mt-2.5 text-xs leading-normal text-[var(--app-muted)]">
+            Courses can be added after this workspace exists.
+          </p>
+        </header>
         <form
           ref={formRef}
           onSubmit={submit}
           noValidate
-          className="app-panel mt-8 space-y-8 rounded-xl border border-[var(--app-border)] p-5 sm:p-8"
+          className="app-panel mt-8 max-w-4xl space-y-8 border border-[var(--app-border)] p-5 sm:p-8"
         >
           {Object.keys(errors).length > 0 && (
             <div
@@ -152,7 +173,7 @@ export default function CreateWorkspacePage() {
               {sessions.map((row, index) => (
                 <div
                   key={row.key}
-                  className="rounded-lg border border-[var(--app-border)] p-4"
+                  className="rounded-sm border border-[var(--app-border)] p-4"
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">
@@ -268,7 +289,7 @@ export default function CreateWorkspacePage() {
               {levels.map((row, index) => (
                 <div
                   key={row.key}
-                  className="rounded-lg border border-[var(--app-border)] p-4"
+                  className="rounded-sm border border-[var(--app-border)] p-4"
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">
@@ -340,6 +361,114 @@ export default function CreateWorkspacePage() {
               Add level
             </button>
             <FieldError>{errors.levels}</FieldError>
+          </fieldset>
+          <fieldset>
+            <legend className="font-display text-xl font-semibold">
+              Initial terms{" "}
+              <span className="text-sm font-normal text-[var(--app-muted)]">
+                (optional)
+              </span>
+            </legend>
+            <p className="mt-1 text-xs text-[var(--app-muted)]">
+              Create reusable workspace terms. Presets only generate editable
+              rows.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {Object.entries(termPresets).map(([label, names]) => (
+                <Button
+                  key={label}
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setTerms(
+                      names.map((name, index) => ({
+                        key: ++nextKey,
+                        name,
+                        code: "",
+                        order: String(index + 1),
+                      })),
+                    )
+                  }
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+            <div className="mt-4 space-y-4">
+              {terms.map((row, index) => (
+                <div
+                  key={row.key}
+                  className="rounded-sm border border-[var(--app-border)] p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">
+                      New term {index + 1}
+                    </p>
+                    <button
+                      type="button"
+                      aria-label={`Remove term ${index + 1}`}
+                      onClick={() =>
+                        setTerms((items) =>
+                          items.filter((item) => item.key !== row.key),
+                        )
+                      }
+                      className="app-icon-button"
+                    >
+                      <Minus size={16} />
+                    </button>
+                  </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    {(
+                      [
+                        ["name", "Name"],
+                        ["code", "Code"],
+                        ["order", "Order"],
+                      ] as const
+                    ).map(([field, label]) => (
+                      <label key={field} className="text-sm">
+                        {label}
+                        <Input
+                          data-field={`terms.${index}.${field}`}
+                          type={field === "order" ? "number" : "text"}
+                          min={field === "order" ? 0 : undefined}
+                          value={row[field]}
+                          onChange={(event) =>
+                            setTerms((items) =>
+                              items.map((item) =>
+                                item.key === row.key
+                                  ? { ...item, [field]: event.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          className="mt-1"
+                          aria-invalid={Boolean(
+                            errors[`terms.${index}.${field}`],
+                          )}
+                        />
+                        <FieldError>
+                          {errors[`terms.${index}.${field}`]}
+                        </FieldError>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={terms.length >= 50}
+              onClick={() =>
+                setTerms((items) => [
+                  ...items,
+                  { key: ++nextKey, name: "", code: "", order: "" },
+                ])
+              }
+              className="focus-ring mt-4 inline-flex items-center gap-2 rounded text-sm font-semibold text-blue-600 disabled:opacity-40"
+            >
+              <Plus size={15} /> Add custom term
+            </button>
+            <FieldError>{errors.terms}</FieldError>
           </fieldset>
           <RequestError>
             {create.isError

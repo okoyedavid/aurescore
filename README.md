@@ -340,5 +340,6 @@ npm run build
 ```
 
 Authentication coverage includes password login, unverified-email resolution, email and login OTP verification, resend cooldowns, Google callback states, Strict Mode callback deduplication, current-user hydration, simultaneous refresh locking, refresh rotation conflicts, refresh rejection, retry-loop prevention, password and email changes, current/other session revocation, and Cloudinary upload authorization.
-#   a u r e s c o r e  
+#   a u r e s c o r e 
+ 
  

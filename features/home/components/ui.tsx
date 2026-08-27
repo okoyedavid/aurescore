@@ -69,7 +69,7 @@ export function ImageSlot({
 export function CircleArrow({ invert = false }: { invert?: boolean }) {
   return (
     <span
-      className={`circle-arrow inline-flex h-16 w-16 items-center justify-center rounded-full transition-transform duration-300 ${
+      className={`circle-arrow inline-flex h-16 w-16 items-center justify-center rounded-md transition-transform duration-200 ${
         invert ? "bg-white text-ink" : "bg-navy-deep text-white"
       }`}
     >

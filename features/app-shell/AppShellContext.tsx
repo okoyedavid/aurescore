@@ -40,18 +40,26 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
-  const value = useMemo(() => ({
-    collapsed,
-    theme,
-    toggleCollapsed: () => setCollapsed((current) => !current),
-    toggleTheme,
-  }), [collapsed, theme]);
+  const value = useMemo(
+    () => ({
+      collapsed,
+      theme,
+      toggleCollapsed: () => setCollapsed((current) => !current),
+      toggleTheme,
+    }),
+    [collapsed, theme],
+  );
 
-  return <AppShellContext.Provider value={value}>{children}</AppShellContext.Provider>;
+  return (
+    <AppShellContext.Provider value={value}>
+      {children}
+    </AppShellContext.Provider>
+  );
 }
 
 export function useAppShell() {
   const context = useContext(AppShellContext);
-  if (!context) throw new Error("useAppShell must be used inside AppShellProvider");
+  if (!context)
+    throw new Error("useAppShell must be used inside AppShellProvider");
   return context;
 }

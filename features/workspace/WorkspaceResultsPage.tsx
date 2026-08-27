@@ -10,43 +10,70 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { normalizeApiError } from "@/lib/api/errors";
 import WorkspaceChrome from "./components/WorkspaceChrome";
 import { FieldError, RequestError } from "./components/FieldError";
-import { useCourses, useLevels, useSessions } from "./hooks";
+import { useCourses, useLevels, useSessions, useTerms } from "./hooks";
 import {
   useAssessmentSchemes,
   useCourseOfferings,
+  useGradingSchemes,
   useResolveCourseOffering,
   useResultMutations,
   useResults,
   useStudents,
 } from "./records-hooks";
-import { buildScores, estimatedTotal } from "./records-validation";
+import { buildScores } from "./records-validation";
 import type {
   CourseOffering,
   ResultRecord,
-  ResultStatus,
+  ResultOfferingContext,
   Student,
 } from "./types";
 
 type Context = {
   sessionId: string;
+  termId: string;
   levelId: string;
   courseId: string;
   assessmentSchemeId: string;
+  gradingSchemeId: string;
   creditUnits: string;
 };
 const initialContext: Context = {
   sessionId: "",
+  termId: "",
   levelId: "",
   courseId: "",
   assessmentSchemeId: "",
+  gradingSchemeId: "",
   creditUnits: "",
+};
+const contextParams: Record<keyof Context, string> = {
+  sessionId: "session",
+  termId: "term",
+  levelId: "level",
+  courseId: "course",
+  assessmentSchemeId: "scheme",
+  gradingSchemeId: "grading",
+  creditUnits: "units",
 };
 type ScoreEditor = {
   student: Student;
   result?: ResultRecord;
   values: Record<string, string>;
-  status: ResultStatus;
 };
+
+function offeringContextText(context: ResultOfferingContext) {
+  return [
+    context.course.code || context.course.name,
+    context.session.name,
+    context.term?.name,
+    context.level?.name,
+    context.assessmentScheme?.name,
+    context.gradingScheme?.name,
+    context.creditUnits !== null ? `${context.creditUnits} units` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 function EmptyLink({
   children,
@@ -65,24 +92,46 @@ function EmptyLink({
   );
 }
 
-export function Results({ workspaceId }: { workspaceId: string }) {
+export function Results({
+  workspaceId,
+  initialSelection = initialContext,
+  initialOfferingId = "",
+  initialStudentId = "",
+}: {
+  workspaceId: string;
+  initialSelection?: Context;
+  initialOfferingId?: string;
+  initialStudentId?: string;
+}) {
   const base = `/workspace/${encodeURIComponent(workspaceId)}`;
+  const [context, setContext] = useState(initialSelection);
+  const [termUsesCourseDefault, setTermUsesCourseDefault] = useState(false);
+  const [levelUsesCourseDefault, setLevelUsesCourseDefault] = useState(false);
+  const [termIsExplicit, setTermIsExplicit] = useState(
+    Boolean(initialSelection.termId),
+  );
+  const [levelIsExplicit, setLevelIsExplicit] = useState(
+    Boolean(initialSelection.levelId),
+  );
   const sessions = useSessions(workspaceId);
+  const terms = useTerms(workspaceId);
   const levels = useLevels(workspaceId);
   const courses = useCourses(workspaceId);
   const schemes = useAssessmentSchemes(workspaceId);
+  const gradingSchemes = useGradingSchemes(workspaceId);
   const students = useStudents(workspaceId);
   const offerings = useCourseOfferings(workspaceId);
   const results = useResults(workspaceId);
   const resolver = useResolveCourseOffering(workspaceId);
   const mutations = useResultMutations(workspaceId);
-  const [context, setContext] = useState(initialContext);
   const [offering, setOffering] = useState<CourseOffering | null>(null);
   const [editor, setEditor] = useState<ScoreEditor | null>(null);
   const [scoreErrors, setScoreErrors] = useState<Record<string, string>>({});
   const [deleting, setDeleting] = useState<ResultRecord | null>(null);
   const [contextError, setContextError] = useState<string>();
   const locked = useRef(false);
+  const selectedTermId = context.termId;
+  const components = offering?.assessmentScheme?.components ?? [];
   const offeringResults = useMemo(
     () =>
       (results.data ?? []).filter(
@@ -100,10 +149,20 @@ export function Results({ workspaceId }: { workspaceId: string }) {
         (item) =>
           item.courseId === context.courseId &&
           item.sessionId === context.sessionId &&
+          (item.termId ?? "") === selectedTermId &&
           (item.levelId ?? "") === context.levelId,
       ),
-    [context, offerings.data],
+    [
+      context.courseId,
+      context.levelId,
+      context.sessionId,
+      offerings.data,
+      selectedTermId,
+    ],
   );
+  const requestedOffering =
+    offerings.data?.find((item) => item.id === initialOfferingId) ??
+    existingConflict;
   const unsaved = Boolean(
     editor && Object.values(editor.values).some((value) => value !== ""),
   );
@@ -116,28 +175,71 @@ export function Results({ workspaceId }: { workspaceId: string }) {
       )
     )
       return;
-    setContext((current) => ({ ...current, [field]: value }));
+    const selectedCourse =
+      field === "courseId"
+        ? courses.data?.find((course) => course.id === value)
+        : undefined;
+    const next = {
+      ...context,
+      [field]: value,
+      ...(field === "courseId" && !termIsExplicit
+        ? { termId: selectedCourse?.defaultTermId ?? "" }
+        : {}),
+      ...(field === "courseId" && !levelIsExplicit
+        ? { levelId: selectedCourse?.defaultLevelId ?? "" }
+        : {}),
+    };
+    if (field === "termId") {
+      setTermUsesCourseDefault(false);
+      setTermIsExplicit(true);
+    }
+    if (field === "levelId") {
+      setLevelUsesCourseDefault(false);
+      setLevelIsExplicit(true);
+    }
+    if (field === "courseId") {
+      setTermUsesCourseDefault(
+        Boolean(!termIsExplicit && selectedCourse?.defaultTermId),
+      );
+      setLevelUsesCourseDefault(
+        Boolean(!levelIsExplicit && selectedCourse?.defaultLevelId),
+      );
+    }
+    const url = new URL(window.location.href);
+    const param = contextParams[field];
+    if (value) url.searchParams.set(param, value);
+    else url.searchParams.delete(param);
+    if (field === "courseId") {
+      if (next.termId) url.searchParams.set(contextParams.termId, next.termId);
+      if (next.levelId)
+        url.searchParams.set(contextParams.levelId, next.levelId);
+    }
+    window.history.replaceState(null, "", url);
+    setContext(next);
     setEditor(null);
     setOffering(null);
     setContextError(undefined);
   }
 
   async function resolveOffering() {
+    const assessmentSchemeId =
+      context.assessmentSchemeId || requestedOffering?.assessmentSchemeId || "";
     if (
       !context.sessionId ||
       !context.courseId ||
-      !context.assessmentSchemeId ||
+      !assessmentSchemeId ||
       resolver.isPending
     )
       return;
-    const credit =
-      context.creditUnits.trim() === "" ? null : Number(context.creditUnits);
+    const credit = context.creditUnits.trim()
+      ? Number(context.creditUnits)
+      : null;
     if (
       credit !== null &&
       (!Number.isFinite(credit) ||
         credit < 0 ||
         credit > 1000 ||
-        (String(credit).split(".")[1]?.length ?? 0) > 3)
+        (context.creditUnits.trim().split(".")[1]?.length ?? 0) > 3)
     ) {
       setContextError(
         "Credit units must be between 0 and 1000 with up to three decimal places.",
@@ -147,29 +249,71 @@ export function Results({ workspaceId }: { workspaceId: string }) {
     setContextError(undefined);
     resolver.reset();
     try {
-      setOffering(
-        await resolver.mutateAsync({
-          courseId: context.courseId,
-          sessionId: context.sessionId,
-          levelId: context.levelId || null,
-          assessmentSchemeId: context.assessmentSchemeId,
-          creditUnits: credit,
-        }),
+      const resolved = await resolver.mutateAsync({
+        courseId: context.courseId,
+        sessionId: context.sessionId,
+        ...(termUsesCourseDefault ? {} : { termId: selectedTermId || null }),
+        ...(levelUsesCourseDefault ? {} : { levelId: context.levelId || null }),
+        assessmentSchemeId,
+        gradingSchemeId:
+          context.gradingSchemeId || requestedOffering?.gradingSchemeId || null,
+        creditUnits:
+          credit ??
+          (requestedOffering?.creditUnits === null ||
+          requestedOffering?.creditUnits === undefined
+            ? null
+            : Number(requestedOffering.creditUnits)),
+      });
+      if (!resolved.assessmentScheme) {
+        setContextError(
+          "Choose an assessment scheme before entering results for this offering.",
+        );
+        setOffering(null);
+        return;
+      }
+      setOffering(resolved);
+      setContext((current) => ({
+        ...current,
+        termId: resolved.termId ?? "",
+        levelId: resolved.levelId ?? "",
+        assessmentSchemeId: resolved.assessmentSchemeId ?? "",
+        gradingSchemeId: resolved.gradingSchemeId ?? "",
+        creditUnits: resolved.creditUnits ?? "",
+      }));
+      setTermUsesCourseDefault(false);
+      setLevelUsesCourseDefault(false);
+      setTermIsExplicit(true);
+      setLevelIsExplicit(true);
+      const requestedStudent = students.data?.find(
+        (student) => student.id === initialStudentId,
       );
+      if (requestedStudent)
+        openEditor(
+          requestedStudent,
+          (results.data ?? []).find(
+            (result) =>
+              result.courseOfferingId === resolved.id &&
+              result.studentId === requestedStudent.id,
+          ),
+          resolved,
+        );
     } catch {}
   }
 
-  function openEditor(student: Student, result?: ResultRecord) {
-    if (!offering) return;
+  function openEditor(
+    student: Student,
+    result?: ResultRecord,
+    selectedOffering = offering,
+  ) {
+    if (!selectedOffering?.assessmentScheme) return;
     setScoreErrors({});
     mutations.create.reset();
     mutations.update.reset();
     setEditor({
       student,
       result,
-      status: result?.status ?? "DRAFT",
       values: Object.fromEntries(
-        offering.assessmentScheme.components.map((component) => [
+        selectedOffering.assessmentScheme.components.map((component) => [
           component.key,
           result ? String(result.scores[component.key] ?? "") : "",
         ]),
@@ -179,8 +323,9 @@ export function Results({ workspaceId }: { workspaceId: string }) {
 
   async function saveResult(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     if (
-      !offering ||
+      !offering?.assessmentScheme ||
       !editor ||
       locked.current ||
       mutations.create.isPending ||
@@ -194,9 +339,7 @@ export function Results({ workspaceId }: { workspaceId: string }) {
     setScoreErrors(built.errors);
     if (Object.keys(built.errors).length) {
       requestAnimationFrame(() =>
-        event.currentTarget
-          .querySelector<HTMLElement>("[aria-invalid='true']")
-          ?.focus(),
+        form.querySelector<HTMLElement>("[aria-invalid='true']")?.focus(),
       );
       return;
     }
@@ -205,14 +348,13 @@ export function Results({ workspaceId }: { workspaceId: string }) {
       if (editor.result)
         await mutations.update.mutateAsync({
           id: editor.result.id,
-          input: { scores: built.scores, status: editor.status },
+          input: { scores: built.scores },
         });
       else
         await mutations.create.mutateAsync({
           courseOfferingId: offering.id,
           studentId: editor.student.id,
           scores: built.scores,
-          status: editor.status,
         });
       setEditor(null);
     } catch {
@@ -225,27 +367,23 @@ export function Results({ workspaceId }: { workspaceId: string }) {
     ? normalizeApiError(resolver.error)
     : null;
   const mutation = editor?.result ? mutations.update : mutations.create;
-  const estimateScores =
-    editor && offering
-      ? buildScores(offering.assessmentScheme.components, editor.values).scores
-      : {};
   return (
     <>
       <div>
         <h2 className="font-display text-2xl font-semibold">Results</h2>
-        <p className="mt-1 text-sm text-[var(--app-muted)]">
+        <p className="mt-1 text-xs text-[var(--app-muted)]">
           Choose a session-specific context, then enter and review weighted
           component scores.
         </p>
       </div>
       <section
         aria-labelledby="result-context"
-        className="app-panel mt-5 rounded-xl border border-[var(--app-border)] p-5"
+        className="app-panel mt-5 border border-[var(--app-border)] p-5"
       >
         <h3 id="result-context" className="font-semibold">
           Result context
         </h3>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-semibold">
             1. Session
             <Select
@@ -262,7 +400,26 @@ export function Results({ workspaceId }: { workspaceId: string }) {
             </Select>
           </label>
           <label className="text-sm font-semibold">
-            2. Level{" "}
+            2. Term{" "}
+            <span className="font-normal text-[var(--app-muted)]">
+              (optional)
+            </span>
+            <Select
+              value={selectedTermId}
+              onChange={(e) => changeContext("termId", e.target.value)}
+              className="mt-1"
+              disabled={terms.isPending}
+            >
+              <option value="">No term</option>
+              {terms.data?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="text-sm font-semibold">
+            3. Level{" "}
             <span className="font-normal text-[var(--app-muted)]">
               (optional)
             </span>
@@ -280,7 +437,7 @@ export function Results({ workspaceId }: { workspaceId: string }) {
             </Select>
           </label>
           <label className="text-sm font-semibold">
-            3. Course
+            4. Course
             <Select
               value={context.courseId}
               onChange={(e) => changeContext("courseId", e.target.value)}
@@ -296,7 +453,7 @@ export function Results({ workspaceId }: { workspaceId: string }) {
             </Select>
           </label>
           <label className="text-sm font-semibold">
-            4. Scheme
+            5. Assessment scheme
             <Select
               value={context.assessmentSchemeId}
               onChange={(e) =>
@@ -313,7 +470,25 @@ export function Results({ workspaceId }: { workspaceId: string }) {
             </Select>
           </label>
           <label className="text-sm font-semibold">
-            5. Credit units{" "}
+            6. Grading scheme{" "}
+            <span className="font-normal text-[var(--app-muted)]">
+              (optional)
+            </span>
+            <Select
+              value={context.gradingSchemeId}
+              onChange={(e) => changeContext("gradingSchemeId", e.target.value)}
+              className="mt-1"
+            >
+              <option value="">No grading scheme</option>
+              {gradingSchemes.data?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="text-sm font-semibold">
+            7. Credit units{" "}
             <span className="font-normal text-[var(--app-muted)]">
               (optional)
             </span>
@@ -334,7 +509,10 @@ export function Results({ workspaceId }: { workspaceId: string }) {
             disabled={
               !context.sessionId ||
               !context.courseId ||
-              !context.assessmentSchemeId ||
+              !(
+                context.assessmentSchemeId ||
+                requestedOffering?.assessmentSchemeId
+              ) ||
               resolver.isPending
             }
           >
@@ -363,10 +541,15 @@ export function Results({ workspaceId }: { workspaceId: string }) {
           )}
         </div>
         <RequestError>
-          {contextError ?? (resolveError ? resolveError.message : undefined)}
+          {contextError ??
+            (terms.isError
+              ? normalizeApiError(terms.error).message
+              : resolveError
+                ? resolveError.message
+                : undefined)}
         </RequestError>
-        {resolveError?.status === 409 && existingConflict && (
-          <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        {resolveError?.status === 409 && existingConflict?.assessmentScheme && (
+          <div className="mt-3 rounded-sm border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
             <p>
               This course, session, and level already use “
               {existingConflict.assessmentScheme.name}”. The scheme was not
@@ -375,9 +558,22 @@ export function Results({ workspaceId }: { workspaceId: string }) {
             <button
               className="focus-ring mt-2 rounded font-semibold underline"
               onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set(
+                  contextParams.assessmentSchemeId,
+                  existingConflict.assessmentSchemeId ?? "",
+                );
+                if (existingConflict.gradingSchemeId)
+                  url.searchParams.set(
+                    contextParams.gradingSchemeId,
+                    existingConflict.gradingSchemeId,
+                  );
+                else url.searchParams.delete(contextParams.gradingSchemeId);
+                window.history.replaceState(null, "", url);
                 setContext((current) => ({
                   ...current,
-                  assessmentSchemeId: existingConflict.assessmentSchemeId,
+                  assessmentSchemeId: existingConflict.assessmentSchemeId ?? "",
+                  gradingSchemeId: existingConflict.gradingSchemeId ?? "",
                 }));
                 setOffering(existingConflict);
                 resolver.reset();
@@ -388,19 +584,35 @@ export function Results({ workspaceId }: { workspaceId: string }) {
           </div>
         )}
       </section>
-      {offering && (
+      {offering?.assessmentScheme && (
         <section className="mt-6">
-          <div className="app-panel rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+          <div className="app-panel border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
             <strong>
               {offering.course.code ? `${offering.course.code} — ` : ""}
               {offering.course.name}
             </strong>
             <span className="mx-2">·</span>
-            {offering.session?.name ?? "Legacy offering"}
-            <span className="mx-2">·</span>
-            {offering.level?.name ?? "No level"}
+            {offering.session.name}
+            {offering.term && (
+              <>
+                <span className="mx-2">·</span>
+                {offering.term.name}
+              </>
+            )}
+            {offering.level && (
+              <>
+                <span className="mx-2">·</span>
+                {offering.level.name}
+              </>
+            )}
             <span className="mx-2">·</span>
             {offering.assessmentScheme.name}
+            {offering.gradingScheme && (
+              <>
+                <span className="mx-2">·</span>
+                {offering.gradingScheme.name}
+              </>
+            )}
             {offering.creditUnits !== null && (
               <>
                 <span className="mx-2">·</span>
@@ -409,20 +621,20 @@ export function Results({ workspaceId }: { workspaceId: string }) {
             )}
           </div>
           {students.isPending || results.isPending ? (
-            <Skeleton className="mt-5 h-64 rounded-xl" />
+            <Skeleton className="mt-5 h-64 rounded-none" />
           ) : students.data?.length === 0 ? (
-            <div className="app-panel mt-5 rounded-xl border border-dashed border-[var(--app-border)] p-10 text-center text-sm text-[var(--app-muted)]">
+            <div className="app-panel mt-5 border border-dashed border-[var(--app-border)] p-10 text-center text-xs text-[var(--app-muted)]">
               No students are available.{" "}
               <EmptyLink href={`${base}/students`}>Add students</EmptyLink>{" "}
               first.
             </div>
           ) : (
-            <div className="mt-5 overflow-x-auto rounded-xl border border-[var(--app-border)]">
+            <div className="mt-5 overflow-x-auto border border-[var(--app-border)]">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead className="app-panel">
                   <tr>
                     <th className="p-3">Student</th>
-                    {offering.assessmentScheme.components.map((component) => (
+                    {components.map((component) => (
                       <th key={component.key} className="p-3">
                         {component.label}
                         <span className="block text-xs font-normal text-[var(--app-muted)]">
@@ -431,7 +643,6 @@ export function Results({ workspaceId }: { workspaceId: string }) {
                       </th>
                     ))}
                     <th className="p-3">Total</th>
-                    <th className="p-3">Status</th>
                     <th className="p-3">
                       <span className="sr-only">Actions</span>
                     </th>
@@ -450,23 +661,19 @@ export function Results({ workspaceId }: { workspaceId: string }) {
                           <span className="block text-xs font-normal text-[var(--app-muted)]">
                             {student.matricNumber || "No matric number"}
                           </span>
+                          {result?.courseOffering && (
+                            <span className="mt-1 block max-w-sm text-[10px] font-normal leading-relaxed text-[var(--app-muted)]">
+                              {offeringContextText(result.courseOffering)}
+                            </span>
+                          )}
                         </th>
-                        {offering.assessmentScheme.components.map(
-                          (component) => (
-                            <td key={component.key} className="p-3">
-                              {result?.scores[component.key] ?? "—"}
-                            </td>
-                          ),
-                        )}
+                        {components.map((component) => (
+                          <td key={component.key} className="p-3">
+                            {result?.scores[component.key] ?? "—"}
+                          </td>
+                        ))}
                         <td className="p-3 font-semibold">
                           {result?.totalScore ?? "—"}
-                        </td>
-                        <td className="p-3">
-                          {result
-                            ? result.status === "PUBLISHED"
-                              ? "Published"
-                              : "Draft"
-                            : "Not entered"}
                         </td>
                         <td className="p-3">
                           <div className="flex gap-2">
@@ -505,13 +712,13 @@ export function Results({ workspaceId }: { workspaceId: string }) {
         onClose={() => !mutation.isPending && setEditor(null)}
         title={`${editor?.result ? "Edit" : "Enter"} result — ${editor?.student.name ?? "student"}`}
         description={
-          offering
+          offering?.assessmentScheme
             ? `${offering.course.name} · ${offering.assessmentScheme.name}`
             : undefined
         }
       >
         <form onSubmit={saveResult} noValidate className="space-y-4">
-          {offering?.assessmentScheme.components.map((component, index) => (
+          {offering?.assessmentScheme?.components.map((component, index) => (
             <label key={component.key} className="block text-sm font-semibold">
               {component.label}{" "}
               <span className="font-normal text-[var(--app-muted)]">
@@ -543,35 +750,10 @@ export function Results({ workspaceId }: { workspaceId: string }) {
               <FieldError>{scoreErrors[component.key]}</FieldError>
             </label>
           ))}
-          <label className="block text-sm font-semibold">
-            Status
-            <Select
-              value={editor?.status ?? "DRAFT"}
-              onChange={(e) =>
-                setEditor((current) =>
-                  current
-                    ? { ...current, status: e.target.value as ResultStatus }
-                    : current,
-                )
-              }
-              className="mt-1"
-            >
-              <option value="DRAFT">Draft</option>
-              <option value="PUBLISHED">Published</option>
-            </Select>
-          </label>
-          {offering && editor && (
-            <p className="text-sm text-[var(--app-muted)]">
-              Estimated total:{" "}
-              <strong>
-                {estimatedTotal(
-                  offering.assessmentScheme.components,
-                  estimateScores,
-                ).toFixed(3)}
-              </strong>
-              . The saved server total is authoritative.
-            </p>
-          )}
+          <p className="text-sm text-[var(--app-muted)]">
+            Every component is required. The backend calculates and returns the
+            authoritative total after saving.
+          </p>
           <RequestError>
             {mutation.isError
               ? normalizeApiError(mutation.error).message
@@ -596,7 +778,7 @@ export function Results({ workspaceId }: { workspaceId: string }) {
         open={Boolean(deleting)}
         onClose={() => !mutations.remove.isPending && setDeleting(null)}
         title="Delete result?"
-        description={`Delete the result for ${deleting?.student.name ?? "this student"}? This cannot be undone.`}
+        description={`Delete ${deleting?.student.name ?? "this student"}'s result for ${deleting?.courseOffering.course.name ?? "this course"}? This cannot be undone.`}
       >
         <RequestError>
           {mutations.remove.isError
@@ -617,7 +799,10 @@ export function Results({ workspaceId }: { workspaceId: string }) {
             onClick={async () => {
               if (!deleting) return;
               try {
-                await mutations.remove.mutateAsync(deleting.id);
+                await mutations.remove.mutateAsync({
+                  id: deleting.id,
+                  studentId: deleting.studentId,
+                });
                 setDeleting(null);
               } catch {}
             }}
@@ -632,12 +817,25 @@ export function Results({ workspaceId }: { workspaceId: string }) {
 
 export default function WorkspaceResultsPage({
   workspaceId,
+  initialSelection,
+  initialOfferingId,
+  initialStudentId,
 }: {
   workspaceId: string;
+  initialSelection?: Context;
+  initialOfferingId?: string;
+  initialStudentId?: string;
 }) {
   return (
     <WorkspaceChrome workspaceId={workspaceId}>
-      {() => <Results workspaceId={workspaceId} />}
+      {() => (
+        <Results
+          workspaceId={workspaceId}
+          initialSelection={initialSelection}
+          initialOfferingId={initialOfferingId}
+          initialStudentId={initialStudentId}
+        />
+      )}
     </WorkspaceChrome>
   );
 }

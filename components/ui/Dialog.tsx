@@ -10,6 +10,7 @@ export function Dialog({
   children,
   onClose,
   dismissible = true,
+  className = "",
 }: {
   open: boolean;
   title: string;
@@ -17,6 +18,7 @@ export function Dialog({
   children: React.ReactNode;
   onClose: () => void;
   dismissible?: boolean;
+  className?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const handleClose = useEffectEvent(onClose);
@@ -78,7 +80,7 @@ export function Dialog({
         tabIndex={-1}
         aria-labelledby="dialog-title"
         aria-describedby={description ? "dialog-description" : undefined}
-        className="app-panel relative z-10 max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-[var(--app-border)] p-6 shadow-2xl"
+        className={`app-dialog app-panel relative z-10 max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-[var(--app-border)] p-6 shadow-2xl ${className}`}
       >
         {dismissible && (
           <button
@@ -92,14 +94,14 @@ export function Dialog({
         )}
         <h2
           id="dialog-title"
-          className="pr-10 font-display text-2xl font-semibold"
+          className="app-dialog-title pr-10 font-display text-2xl font-semibold"
         >
           {title}
         </h2>
         {description && (
           <p
             id="dialog-description"
-            className="mt-2 text-sm leading-relaxed text-[var(--app-muted)]"
+            className="app-dialog-description mt-2 text-sm leading-relaxed text-[var(--app-muted)]"
           >
             {description}
           </p>

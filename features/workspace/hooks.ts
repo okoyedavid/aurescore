@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { workspaceApi } from "./api";
 import { workspaceKeys } from "./query-keys";
-import type { WorkspaceDetails } from "./types";
+import type { CourseFilters, WorkspaceCourse, WorkspaceDetails } from "./types";
 
 export function useWorkspaces() {
   return useQuery({
@@ -27,6 +27,16 @@ export function useCreateWorkspace() {
     retry: false,
     onSuccess: async (workspace) => {
       client.setQueryData(workspaceKeys.detail(workspace.id), workspace);
+      client.setQueryData(
+        workspaceKeys.sessions(workspace.id),
+        workspace.sessions,
+      );
+      client.setQueryData(workspaceKeys.terms(workspace.id), workspace.terms);
+      client.setQueryData(workspaceKeys.levels(workspace.id), workspace.levels);
+      client.setQueryData(
+        workspaceKeys.courses(workspace.id),
+        workspace.courses,
+      );
       await client.invalidateQueries({ queryKey: workspaceKeys.all });
     },
   });
@@ -41,6 +51,16 @@ export function usePatchWorkspace(workspaceId: string) {
       client.setQueryData<WorkspaceDetails>(
         workspaceKeys.detail(workspaceId),
         workspace,
+      );
+      client.setQueryData(
+        workspaceKeys.sessions(workspaceId),
+        workspace.sessions,
+      );
+      client.setQueryData(workspaceKeys.terms(workspaceId), workspace.terms);
+      client.setQueryData(workspaceKeys.levels(workspaceId), workspace.levels);
+      client.setQueryData(
+        workspaceKeys.courses(workspaceId),
+        workspace.courses,
       );
       await client.invalidateQueries({ queryKey: workspaceKeys.all });
     },
@@ -61,7 +81,7 @@ export function useDeleteWorkspace(workspaceId: string) {
 async function invalidateChild(
   client: ReturnType<typeof useQueryClient>,
   workspaceId: string,
-  kind: "sessions" | "levels" | "courses",
+  kind: "sessions" | "terms" | "levels" | "courses",
 ) {
   await Promise.all([
     client.invalidateQueries({ queryKey: workspaceKeys[kind](workspaceId) }),
@@ -109,6 +129,55 @@ export function useSessionMutations(workspaceId: string) {
     }),
   };
 }
+export function useTerms(workspaceId: string) {
+  return useQuery({
+    queryKey: workspaceKeys.terms(workspaceId),
+    queryFn: ({ signal }) => workspaceApi.terms(workspaceId, signal),
+    enabled: Boolean(workspaceId),
+    meta: { requiresAuth: true },
+  });
+}
+export function useTermMutations(workspaceId: string) {
+  const client = useQueryClient();
+  const refresh = () => invalidateChild(client, workspaceId, "terms");
+  return {
+    create: useMutation({
+      mutationFn: (input: Parameters<typeof workspaceApi.createTerm>[1]) =>
+        workspaceApi.createTerm(workspaceId, input),
+      retry: false,
+      onSuccess: async (term) => {
+        client.setQueryData(workspaceKeys.term(workspaceId, term.id), term);
+        await refresh();
+      },
+    }),
+    update: useMutation({
+      mutationFn: ({
+        termId,
+        input,
+      }: {
+        termId: string;
+        input: Parameters<typeof workspaceApi.updateTerm>[2];
+      }) => workspaceApi.updateTerm(workspaceId, termId, input),
+      retry: false,
+      onSuccess: async (term) => {
+        client.setQueryData(workspaceKeys.term(workspaceId, term.id), term);
+        await refresh();
+      },
+    }),
+    remove: useMutation({
+      mutationFn: (termId: string) =>
+        workspaceApi.removeTerm(workspaceId, termId),
+      retry: false,
+      onSuccess: async (_, termId) => {
+        client.removeQueries({
+          queryKey: workspaceKeys.term(workspaceId, termId),
+          exact: true,
+        });
+        await refresh();
+      },
+    }),
+  };
+}
 export function useLevels(workspaceId: string) {
   return useQuery({
     queryKey: workspaceKeys.levels(workspaceId),
@@ -146,17 +215,20 @@ export function useLevelMutations(workspaceId: string) {
     }),
   };
 }
-export function useCourses(workspaceId: string) {
+export function useCourses(workspaceId: string, filters: CourseFilters = {}) {
   return useQuery({
-    queryKey: workspaceKeys.courses(workspaceId),
-    queryFn: ({ signal }) => workspaceApi.courses(workspaceId, signal),
+    queryKey: workspaceKeys.courses(workspaceId, filters),
+    queryFn: ({ signal }) => workspaceApi.courses(workspaceId, filters, signal),
     enabled: Boolean(workspaceId),
     meta: { requiresAuth: true },
   });
 }
 export function useCourseMutations(workspaceId: string) {
   const client = useQueryClient();
-  const done = () => invalidateChild(client, workspaceId, "courses");
+  const done = async (course: WorkspaceCourse) => {
+    client.setQueryData(workspaceKeys.course(workspaceId, course.id), course);
+    await invalidateChild(client, workspaceId, "courses");
+  };
   return {
     create: useMutation({
       mutationFn: (input: Parameters<typeof workspaceApi.createCourse>[1]) =>
@@ -179,7 +251,13 @@ export function useCourseMutations(workspaceId: string) {
       mutationFn: (courseId: string) =>
         workspaceApi.removeCourse(workspaceId, courseId),
       retry: false,
-      onSuccess: done,
+      onSuccess: async (_, courseId) => {
+        client.removeQueries({
+          queryKey: workspaceKeys.course(workspaceId, courseId),
+          exact: true,
+        });
+        await invalidateChild(client, workspaceId, "courses");
+      },
     }),
   };
 }

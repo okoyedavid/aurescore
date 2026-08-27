@@ -65,7 +65,7 @@ export default function SiteHeader() {
           </Link>
           <Link
             href="/register"
-            className="focus-ring hidden min-h-11 items-center rounded-full bg-ink px-5 text-sm font-semibold text-white transition-colors hover:bg-navy sm:inline-flex"
+            className="focus-ring hidden min-h-11 items-center rounded-md bg-ink px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-navy sm:inline-flex"
           >
             Register account
           </Link>
@@ -104,7 +104,7 @@ export default function SiteHeader() {
                   type="button"
                   aria-label="Close navigation"
                   onClick={() => setOpen(false)}
-                  className="focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-white/20"
+                  className="focus-ring flex h-10 w-10 items-center justify-center rounded-md border border-white/20 transition-colors duration-150 hover:bg-white/10"
                 >
                   <X size={20} aria-hidden="true" />
                 </button>
@@ -133,14 +133,14 @@ export default function SiteHeader() {
                 <Link
                   href="/sign-in"
                   onClick={() => setOpen(false)}
-                  className="focus-ring flex min-h-12 items-center justify-center rounded-full border border-white/20 text-sm font-semibold"
+                  className="focus-ring flex min-h-12 items-center justify-center rounded-md border border-white/20 text-sm font-semibold"
                 >
                   Sign in
                 </Link>
                 <Link
                   href="/register"
                   onClick={() => setOpen(false)}
-                  className="focus-ring flex min-h-12 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold"
+                  className="focus-ring flex min-h-12 items-center justify-center rounded-md bg-blue-600 text-sm font-semibold"
                 >
                   Register
                 </Link>

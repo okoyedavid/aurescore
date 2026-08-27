@@ -3,12 +3,22 @@ import { normalizeApiError } from "@/lib/api/errors";
 import type {
   AssessmentScheme,
   AssessmentSchemeInput,
+  CalculateGpaResponse,
   CourseOffering,
   CreateResultInput,
+  GradingScheme,
+  GradingSchemeInput,
+  GpaScopeInput,
   ResolveCourseOfferingInput,
   ResultRecord,
+  SaveBatchGpaInput,
+  SaveBatchGpaResponse,
+  SaveGpaInput,
+  SaveGpaResponse,
   Student,
+  StudentAcademicRecordResponse,
   StudentInput,
+  UpdateCourseOfferingConfigurationInput,
   UpdateResultInput,
 } from "./types";
 
@@ -51,6 +61,29 @@ export const recordsApi = {
       apiClient.delete(item(workspaceId, "assessment-schemes", id)),
     ),
 
+  gradingSchemes: (workspaceId: string, signal?: AbortSignal) =>
+    request<GradingScheme[]>(
+      apiClient.get(`${root(workspaceId)}/grading-schemes`, { signal }),
+    ),
+  gradingScheme: (workspaceId: string, id: string, signal?: AbortSignal) =>
+    request<GradingScheme>(
+      apiClient.get(item(workspaceId, "grading-schemes", id), { signal }),
+    ),
+  createGradingScheme: (workspaceId: string, input: GradingSchemeInput) =>
+    request<GradingScheme>(
+      apiClient.post(`${root(workspaceId)}/grading-schemes`, input),
+    ),
+  updateGradingScheme: (
+    workspaceId: string,
+    id: string,
+    input: Partial<GradingSchemeInput>,
+  ) =>
+    request<GradingScheme>(
+      apiClient.patch(item(workspaceId, "grading-schemes", id), input),
+    ),
+  removeGradingScheme: (workspaceId: string, id: string) =>
+    request<void>(apiClient.delete(item(workspaceId, "grading-schemes", id))),
+
   students: (workspaceId: string, signal?: AbortSignal) =>
     request<Student[]>(
       apiClient.get(`${root(workspaceId)}/students`, { signal }),
@@ -81,6 +114,30 @@ export const recordsApi = {
     request<CourseOffering>(
       apiClient.post(`${root(workspaceId)}/course-offerings/resolve`, input),
     ),
+  updateCourseOfferingConfiguration: (
+    workspaceId: string,
+    id: string,
+    input: UpdateCourseOfferingConfigurationInput,
+  ) =>
+    request<CourseOffering>(
+      apiClient.patch(
+        `${item(workspaceId, "course-offerings", id)}/configuration`,
+        input,
+      ),
+    ),
+
+  calculateGpa: (workspaceId: string, input: GpaScopeInput) =>
+    request<CalculateGpaResponse>(
+      apiClient.post(`${root(workspaceId)}/gpa/calculate`, input),
+    ),
+  saveGpa: (workspaceId: string, input: SaveGpaInput) =>
+    request<SaveGpaResponse>(
+      apiClient.post(`${root(workspaceId)}/gpa/save`, input),
+    ),
+  saveBatchGpa: (workspaceId: string, input: SaveBatchGpaInput) =>
+    request<SaveBatchGpaResponse>(
+      apiClient.post(`${root(workspaceId)}/gpa/save-batch`, input),
+    ),
 
   results: (workspaceId: string, signal?: AbortSignal) =>
     request<ResultRecord[]>(
@@ -100,4 +157,16 @@ export const recordsApi = {
     ),
   removeResult: (workspaceId: string, id: string) =>
     request<void>(apiClient.delete(item(workspaceId, "results", id))),
+
+  studentAcademicRecord: (
+    workspaceId: string,
+    studentId: string,
+    signal?: AbortSignal,
+  ) =>
+    request<StudentAcademicRecordResponse>(
+      apiClient.get(
+        `${item(workspaceId, "students", studentId)}/academic-record`,
+        { signal },
+      ),
+    ),
 };
