@@ -8,6 +8,7 @@ const footerGroups = [
       { label: "Academic workflow", href: "/workflow" },
       { label: "Security", href: "/security" },
       { label: "Pricing", href: "/pricing" },
+      { label: "Public calculators", href: "/public-calculators" },
     ],
   },
   {

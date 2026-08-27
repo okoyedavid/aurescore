@@ -39,6 +39,8 @@ const excludedAuthPaths = [
   "/auth/email-verification/",
   "/auth/login-verification/",
   "/auth/password-reset/",
+  "/public/public-calculators",
+  "/public/public-calculators/",
 ];
 
 function requestPath(config: InternalAxiosRequestConfig) {

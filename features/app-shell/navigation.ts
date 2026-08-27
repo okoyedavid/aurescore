@@ -6,6 +6,7 @@ import {
   FileBarChart,
   LayoutDashboard,
   PlusCircle,
+  Calculator,
   Settings,
   UserRoundCog,
   Users,
@@ -30,6 +31,11 @@ export const destinations: NavigationItem[] = [
 
 export const navigationByArea = {
   dashboard: [
+    {
+      label: "Public calculators",
+      href: "/dashboard/public-calculators",
+      icon: Calculator,
+    },
     {
       label: "Invitations",
       href: "/dashboard/invitations",

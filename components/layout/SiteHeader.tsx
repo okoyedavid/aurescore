@@ -11,6 +11,7 @@ const links = [
   { label: "Workflow", href: "/workflow" },
   { label: "Security", href: "/security" },
   { label: "Pricing", href: "/pricing" },
+  { label: "Calculators", href: "/public-calculators" },
   { label: "Developers", href: "/developers" },
 ];
 
