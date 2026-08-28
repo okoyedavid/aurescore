@@ -176,7 +176,7 @@ export default function DimensionManager({
                       item.code
                       ? item.code
                       : "No code"
-                    : "Context label"}{" "}
+                    : "Academic session"}{" "}
                   · {item.order === null ? "Unordered" : `Order ${item.order}`}
                 </p>
               </div>

@@ -252,7 +252,7 @@ describe("public calculator management", () => {
       />,
     );
     expect(
-      await screen.findByText("Grading scheme configured: Needs attention"),
+      await screen.findByText("Grading scheme added: Needs attention"),
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
     expect(apiMock.history.post).toHaveLength(0);

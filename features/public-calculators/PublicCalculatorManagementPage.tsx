@@ -174,8 +174,7 @@ function GradingEditor({
         Grading Scheme
       </h2>
       <p className="mt-1 text-xs text-[var(--app-muted)]">
-        Saving replaces the complete grading configuration and may unpublish the
-        calculator.
+        Saving changes the grading scheme and may unpublish the calculator.
       </p>
       <form
         onSubmit={save}
@@ -209,7 +208,7 @@ function PublishPanel({ calculator }: { calculator: CreatorCalculatorDetail }) {
   const [notice, setNotice] = useState("");
   const checks = [
     {
-      label: "Grading scheme configured",
+      label: "Grading scheme added",
       ready: Boolean(calculator.gradingScheme),
     },
     { label: "At least one Course", ready: calculator.courses.length > 0 },
@@ -271,8 +270,8 @@ function PublishPanel({ calculator }: { calculator: CreatorCalculatorDetail }) {
         Review, publish, and share
       </h2>
       <p className="mt-1 text-xs text-[var(--app-muted)]">
-        Sessions remain optional. Configuration changes may unpublish a
-        previously shared calculator.
+        Sessions are optional. Changes may unpublish a previously shared
+        calculator.
       </p>
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="app-panel border border-[var(--app-border)] p-5">
@@ -354,8 +353,7 @@ function PublishPanel({ calculator }: { calculator: CreatorCalculatorDetail }) {
           Delete calculator
         </h3>
         <p className="mt-2 text-xs text-[var(--app-muted)]">
-          Deletion permanently removes its configuration and public
-          availability.
+          Deletion permanently removes the calculator and its public page.
         </p>
         <Button
           className="mt-4 bg-red-700 hover:bg-red-600"

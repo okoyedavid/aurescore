@@ -7,7 +7,7 @@ export default function AcademicContext() {
         <div className="grid gap-10 lg:grid-cols-[0.58fr_1fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
-              Problem context
+              The problem
             </p>
             <h2 className="mt-4 font-display text-4xl font-semibold leading-tight">
               Why I chose result processing.
@@ -30,7 +30,7 @@ export default function AcademicContext() {
               disconnected file transfers.
             </p>
             <p>
-              The initial scope focuses on Nigerian universities, where the
+              The initial focus is Nigerian universities, where the
               application must accommodate institutional grading rules and a
               formal hierarchy of academic review.
             </p>

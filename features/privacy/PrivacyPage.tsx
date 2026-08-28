@@ -3,23 +3,23 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy notice"
-      intro="This notice describes the intended data-handling principles for the AureScore prototype. It must be reviewed and completed before a production launch."
+      intro="This notice explains how AureScore handles account and academic information."
       sections={[
         {
           title: "Information collected",
-          copy: "A production service may process account details, institutional structure, course assignments, academic results, approval activity, and technical logs necessary to operate and protect the platform.",
+          copy: "AureScore may process account details, academic structure, course assignments, results, approval activity, and security logs needed to provide the service.",
         },
         {
           title: "Purpose and access",
-          copy: "Academic information should be used only to provide authorised institutional workflows. Access should be limited by role, institution, department, course assignment, and student identity as appropriate.",
+          copy: "Academic information is used to provide authorised result-management features. Access is limited according to each user's role and workspace.",
         },
         {
           title: "Retention and deletion",
-          copy: "Retention periods must be agreed with each institution and aligned with applicable academic-record and data-protection requirements. Production administrators should have documented export and deletion procedures.",
+          copy: "Academic records should be retained according to institutional policy and applicable data-protection requirements. Contact AureScore to request access, correction, or deletion where available.",
         },
         {
-          title: "Prototype status",
-          copy: "The current project is a functional interface prototype and should not be used to store live student records until authentication, authorisation, encryption, backups, monitoring, and legal agreements are implemented and verified.",
+          title: "Responsible use",
+          copy: "Only upload academic information that you are authorised to manage. Institutions remain responsible for approving use of AureScore with live student records.",
         },
       ]}
     />

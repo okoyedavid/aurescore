@@ -5,7 +5,7 @@ export default function Page() {
       area="institution"
       eyebrow="Academic records"
       title="Students"
-      copy="Maintain institution-scoped student records and inspect result history without exposing data across tenants."
+      copy="Manage student records and review academic history across the institution."
     />
   );
 }

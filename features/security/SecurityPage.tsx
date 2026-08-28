@@ -47,7 +47,7 @@ export default function SecurityPage() {
           points: [
             "Actor and timestamp",
             "Status history",
-            "Correction context",
+            "Correction reasons",
           ],
         },
         {

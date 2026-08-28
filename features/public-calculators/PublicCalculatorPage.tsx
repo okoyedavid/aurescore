@@ -278,7 +278,7 @@ function Breakdown({
       <div className="flex flex-col justify-between gap-4 border-b border-line pb-5 sm:flex-row sm:items-center">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
-            Backend-authoritative result
+            Calculation results
           </p>
           <h2
             id="breakdown-heading"
@@ -884,10 +884,10 @@ function CalculatorWorkspace({
           <div className="flex gap-3 border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             <AlertTriangle className="mt-0.5 shrink-0" size={18} />
             <p>
-              <strong>Calculator configuration warning:</strong>{" "}
+              <strong>Some courses are unavailable:</strong>{" "}
               {incompleteCount}{" "}
-              {incompleteCount === 1 ? "Course is" : "Courses are"} unavailable
-              because the owner has not completed Level, Term, or credit units.
+              {incompleteCount === 1 ? "course is" : "courses are"} missing a
+              level, term, or credit units.
             </p>
           </div>
         )}
@@ -907,15 +907,11 @@ function CalculatorWorkspace({
           <div className="flex flex-col justify-between gap-3 border-b border-line pb-5 sm:flex-row sm:items-start">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">
-                Current term entry
+                Results entry
               </p>
               <h2 className="mt-1 font-display text-3xl font-semibold">
-                Choose one academic period
+                Enter your results
               </h2>
-              <p className="mt-2 text-sm text-muted">
-                Calculate one manageable Term, add it, then switch context
-                without losing previous work.
-              </p>
             </div>
             <button
               type="button"
@@ -926,7 +922,7 @@ function CalculatorWorkspace({
             </button>
           </div>
           <fieldset className="mt-6 grid gap-4 md:grid-cols-3">
-            <legend className="sr-only">Academic context</legend>
+            <legend className="sr-only">Academic period</legend>
             <label className="text-sm font-semibold">
               Session *
               <Select
@@ -1017,10 +1013,10 @@ function CalculatorWorkspace({
           <div className="mt-6 flex flex-col gap-2 border-y border-line py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">
-                Carryover / repeat attempts
+                Carryover courses
               </p>
               <p className="mt-1 text-xs text-muted">
-                Add a Course already entered at an earlier Level. Its original
+                Add a course from an earlier level. Its original
                 result will remain unchanged.
               </p>
             </div>
@@ -1041,12 +1037,12 @@ function CalculatorWorkspace({
             <legend className="sr-only">Courses</legend>
             {!contextReady && (
               <p className="border border-dashed border-line p-8 text-center text-sm text-muted">
-                Select a Session, Level, and Term to load Courses.
+                Select a session, level, and term to view courses.
               </p>
             )}
             {contextReady && !courses.length && !current.carryovers.length && (
               <p className="border border-dashed border-line p-8 text-center text-sm text-muted">
-                No configured Courses are available for this Level and Term.
+                No courses are available for this level and term.
               </p>
             )}
             {courses.length + current.carryovers.length > 0 && (
@@ -1058,9 +1054,8 @@ function CalculatorWorkspace({
                   <p className="mt-1 text-xs text-muted">
                     {courses.length + current.carryovers.length}{" "}
                     {courses.length + current.carryovers.length === 1
-                      ? "Course attempt"
-                      : "Course attempts"}{" "}
-                    · values are saved in this browser
+                      ? "course"
+                      : "courses"}
                   </p>
                 </div>
                 {courses.map((course) => {
@@ -1293,8 +1288,7 @@ function CalculatorWorkspace({
                 </p>
               </div>
               <p className="text-xs text-emerald-900">
-                Calculated by the AureScore backend. Add this Term to include it
-                in CGPA.
+                Add this term to update your CGPA.
               </p>
             </div>
           )}
@@ -1319,7 +1313,7 @@ function CalculatorWorkspace({
               id="my-calculation-heading"
               className="mt-1 font-display text-2xl font-semibold"
             >
-              Saved working groups
+              Your results
             </h2>
           </div>
           <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">
@@ -1327,12 +1321,11 @@ function CalculatorWorkspace({
           </span>
         </div>
         <p className="mt-2 text-xs leading-relaxed text-muted">
-          Private to this browser. Raw entries are restored after refresh;
-          results are recalculated by the backend.
+          Saved on this device.
         </p>
         {!groups.length && (
           <p className="mt-5 border border-dashed border-line p-6 text-center text-sm text-muted">
-            Calculate and add your first Term.
+            Add your first term.
           </p>
         )}
         <div className="mt-5 space-y-3">
@@ -1425,19 +1418,18 @@ function CalculatorWorkspace({
         open={carryoverOpen}
         onClose={() => setCarryoverOpen(false)}
         title="Add Carryover Course"
-        description="Only Courses from a lower ordered Level in the selected Term are available. Existing attempts are not changed."
+        description="Choose a course from an earlier level. Existing results will not change."
         className="max-w-3xl!"
       >
         {currentLevelOrder == null && (
           <p className="border border-dashed border-line p-6 text-center text-sm text-muted">
-            Carryover is unavailable because the selected Level has no order.
+            Carryover courses are unavailable for this level.
           </p>
         )}
         {currentLevelOrder != null &&
           availableCarryoverGroups.length === 0 && (
             <p className="border border-dashed border-line p-6 text-center text-sm text-muted">
-              No eligible lower-Level Courses remain for this Term, or all of
-              them have already been selected.
+              No earlier-level courses are available for this term.
             </p>
           )}
         <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-1">

@@ -10,7 +10,7 @@ const WORKFLOW_STEPS = [
     id: 1,
     label: "Score Entry",
     statement:
-      "Lecturers submit raw scores directly into a structured, auditable entry point.",
+      "Lecturers enter scores directly into a consistent course record.",
 
     badgeLeft: "Draft Saved",
     badgeRight: "CSC 401",

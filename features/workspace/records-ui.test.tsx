@@ -588,7 +588,7 @@ describe("workspace records UI", () => {
     ).not.toBeInTheDocument();
     expect(
       within(dialog).getByText(
-        /backend calculates and returns the authoritative total/,
+        /total is calculated automatically/,
       ),
     ).toBeVisible();
     fireEvent.click(

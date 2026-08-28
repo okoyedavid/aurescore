@@ -12,7 +12,7 @@ export default function WorkflowPage() {
   return (
     <MarketingShell
       eyebrow="Academic workflow"
-      title="A clear route from raw score to official record."
+      title="A clear route from score entry to official record."
       intro="Each stage has an owner, a status, and a visible next action. Teams can move faster without weakening academic oversight."
       note={{
         label: "Lifecycle",
@@ -23,7 +23,7 @@ export default function WorkflowPage() {
         {
           icon: BookOpen,
           title: "Configure",
-          copy: "Set the academic context before result work begins.",
+          copy: "Set up the academic period before entering results.",
           points: [
             "Create session and semester",
             "Assign courses and lecturers",

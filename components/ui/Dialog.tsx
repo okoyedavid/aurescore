@@ -80,6 +80,10 @@ export function Dialog({
         tabIndex={-1}
         aria-labelledby="dialog-title"
         aria-describedby={description ? "dialog-description" : undefined}
+        style={{
+          backgroundColor: "var(--app-panel, #ffffff)",
+          color: "var(--app-text, #0d0d0d)",
+        }}
         className={`app-dialog app-panel relative z-10 max-h-[calc(100dvh-4rem)] w-full max-w-md overflow-y-auto rounded-xl border border-[var(--app-border,#e4e1d9)] p-6 shadow-2xl ${className}`}
       >
         {dismissible && (

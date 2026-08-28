@@ -171,7 +171,7 @@ export function Results({
     if (
       unsaved &&
       !window.confirm(
-        "Changing result context will discard unsaved scores. Continue?",
+        "Changing this selection will discard unsaved scores. Continue?",
       )
     )
       return;
@@ -266,7 +266,7 @@ export function Results({
       });
       if (!resolved.assessmentScheme) {
         setContextError(
-          "Choose an assessment scheme before entering results for this offering.",
+          "Choose an assessment scheme before entering results for this course.",
         );
         setOffering(null);
         return;
@@ -372,8 +372,7 @@ export function Results({
       <div>
         <h2 className="font-display text-2xl font-semibold">Results</h2>
         <p className="mt-1 text-xs text-[var(--app-muted)]">
-          Choose a session-specific context, then enter and review weighted
-          component scores.
+          Choose a course and enter student scores.
         </p>
       </div>
       <section
@@ -381,7 +380,7 @@ export function Results({
         className="app-panel mt-5 border border-[var(--app-border)] p-5"
       >
         <h3 id="result-context" className="font-semibold">
-          Result context
+          Result details
         </h3>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-semibold">
@@ -751,8 +750,8 @@ export function Results({
             </label>
           ))}
           <p className="text-sm text-[var(--app-muted)]">
-            Every component is required. The backend calculates and returns the
-            authoritative total after saving.
+            Enter every score before saving. The total is calculated
+            automatically.
           </p>
           <RequestError>
             {mutation.isError

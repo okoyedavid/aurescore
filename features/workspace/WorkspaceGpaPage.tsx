@@ -148,7 +148,7 @@ function CourseAudit({ response }: { response: SingleStudentGpaResponse }) {
   if (response.courses.length === 0)
     return (
       <p className="mt-5 border border-dashed border-[var(--app-border)] p-8 text-center text-xs text-[var(--app-muted)]">
-        No calculated course rows are available in this GPA scope.
+        No course results are available for this selection.
       </p>
     );
   return (
@@ -256,8 +256,8 @@ function IncompleteStudentsPanel({
     <section className="mt-5" aria-label={heading}>
       <h4 className="font-display text-lg font-semibold">{heading}</h4>
       <p className="mt-1 text-xs text-[var(--app-muted)]">
-        Each listed course needs an existing Result before this student can be
-        calculated. Saved Results always contain every assessment component.
+        Add a complete result for each course listed below before calculating
+        this student&apos;s GPA.
       </p>
       <ul className="mt-3 grid border-l border-t border-[var(--app-border)] lg:grid-cols-2">
         {students.map((student) => (
@@ -420,7 +420,7 @@ function GpaWorkspace({
     if (
       ["preflight", "single-ready", "batch-ready"].includes(screen.kind) &&
       !window.confirm(
-        "Changing the GPA scope will discard the current preview. Continue?",
+        "Changing this selection will discard the current preview. Continue?",
       )
     )
       return false;
@@ -473,7 +473,7 @@ function GpaWorkspace({
       if (!response.ready) {
         setPreflight(response);
         setNotice(
-          `Calculation is not ready: ${response.incompleteStudents.length} incomplete ${response.incompleteStudents.length === 1 ? "student" : "students"} and ${response.missingConfiguration.length} ${response.missingConfiguration.length === 1 ? "offering" : "offerings"} needing configuration.`,
+          `GPA is not ready: ${response.incompleteStudents.length} ${response.incompleteStudents.length === 1 ? "student has" : "students have"} incomplete results and ${response.missingConfiguration.length} ${response.missingConfiguration.length === 1 ? "course needs" : "courses need"} more details.`,
         );
       } else if ("student" in response) {
         setScreen({ kind: "single-ready", response });
@@ -570,7 +570,7 @@ function GpaWorkspace({
     try {
       await configure.mutateAsync({ id: item.courseOfferingId, input });
       setConfigured((current) => new Set(current).add(item.courseOfferingId));
-      setNotice(`${courseName(item)} configuration was updated.`);
+      setNotice(`${courseName(item)} was updated.`);
     } catch {}
   }
 
@@ -585,7 +585,7 @@ function GpaWorkspace({
       if (!saved.ready) {
         setPreflight(saved);
         setNotice(
-          "Result coverage or configuration changed. Review the new preflight check.",
+          "Results have changed. Review the issues below.",
         );
       } else {
         setSavedSummary(saved.summary);
@@ -614,7 +614,7 @@ function GpaWorkspace({
       if (!saved.ready) {
         setPreflight(saved);
         setNotice(
-          "Result coverage or configuration changed. Review the new preflight check.",
+          "Results have changed. Review the issues below.",
         );
       } else {
         const count = saved.savedSummaries.length;
@@ -648,12 +648,11 @@ function GpaWorkspace({
     <>
       <header>
         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.13em] text-blue-600">
-          Complete Result coverage
+          Academic performance
         </p>
         <h2 className="font-display text-2xl font-semibold">GPA and CGPA</h2>
         <p className="mt-1 max-w-3xl text-xs text-[var(--app-muted)]">
-          Preview backend-resolved grades and quality points, repair incomplete
-          offerings, then explicitly save the recalculated summary.
+          Calculate GPA and CGPA from saved student results.
         </p>
       </header>
 
@@ -661,7 +660,7 @@ function GpaWorkspace({
         onSubmit={submitScope}
         className="app-panel mt-5 border border-[var(--app-border)] p-5"
       >
-        <h3 className="font-semibold">Calculation scope</h3>
+        <h3 className="font-semibold">Results to include</h3>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-semibold">
             Session
@@ -769,8 +768,7 @@ function GpaWorkspace({
         </div>
         <div className="mt-5 flex flex-col gap-4 border-t border-[var(--app-border)] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-2xl text-xs text-[var(--app-muted)]">
-            A student is calculated only when a saved Result exists for every
-            CourseOffering in this scope. Missing courses are listed by name.
+            Students need a complete saved result for every course included.
           </p>
           <Button
             type="submit"
@@ -799,8 +797,7 @@ function GpaWorkspace({
             Calculating preview…
           </h3>
           <p className="mt-2 text-xs text-[var(--app-muted)]">
-            The backend is checking Result coverage and resolving the cumulative
-            scope.
+            Checking student results…
           </p>
         </section>
       )}
@@ -840,9 +837,8 @@ function GpaWorkspace({
                 <ScopeLabel scope={screen.response.scope} {...visibleLabels} />
               )}
               <p className="mt-3 max-w-3xl text-xs text-[var(--app-muted)]">
-                Result coverage and CourseOffering configuration are checked
-                independently. Resolve each section below, then explicitly
-                recalculate the unchanged scope.
+                Fix the missing results and course details below, then calculate
+                again.
               </p>
             </div>
             <Button
@@ -862,13 +858,12 @@ function GpaWorkspace({
             heading="Missing student results"
           />
           {screen.response.missingConfiguration.length > 0 && (
-            <section className="mt-5" aria-label="Offering configuration">
+            <section className="mt-5" aria-label="Course details">
               <h4 className="font-display text-lg font-semibold">
-                Offering configuration
+                Missing course details
               </h4>
               <p className="mt-1 text-xs text-[var(--app-muted)]">
-                The backend also needs these CourseOffering fields before GPA
-                and cumulative values can be resolved.
+                Complete these course details before calculating GPA.
               </p>
               <ul className="mt-3 grid border-l border-t border-[var(--app-border)] lg:grid-cols-2">
                 {screen.response.missingConfiguration.map((item) => {
@@ -906,8 +901,7 @@ function GpaWorkspace({
                         )}
                       </div>
                       <p className="mt-3 text-xs text-[var(--app-muted)]">
-                        This CourseOffering configuration applies to every
-                        student result in this course context.
+                        These details apply to every student taking this course.
                       </p>
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         {item.missing.includes("assessmentSchemeId") && (
@@ -991,7 +985,7 @@ function GpaWorkspace({
                         {configure.isPending &&
                         configure.variables?.id === item.courseOfferingId
                           ? "Updating…"
-                          : "Update offering"}
+                          : "Update course"}
                       </Button>
                     </li>
                   );
@@ -1039,14 +1033,12 @@ function GpaWorkspace({
             </div>
             {isStale && (
               <p className="mt-4 border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-                This preview is stale because academic data changed. Recalculate
-                before saving.
+                Academic data has changed. Calculate again before saving.
               </p>
             )}
             {screen.response.gpa === null && (
               <p className="mt-4 border border-dashed border-[var(--app-border)] p-6 text-center text-xs text-[var(--app-muted)]">
-                The backend returned no current GPA for this complete scope, so
-                there is no summary to save. Historical cumulative values may
+                There is no current GPA to save. Previous cumulative values may
                 still appear below.
               </p>
             )}
@@ -1097,7 +1089,7 @@ function GpaWorkspace({
                   tabIndex={-1}
                   className="font-display text-xl font-semibold"
                 >
-                  Batch GPA preview
+                  GPA preview
                 </h3>
                 {visibleLabels && (
                   <ScopeLabel
@@ -1119,7 +1111,7 @@ function GpaWorkspace({
             </div>
             {isStale && (
               <p className="mt-4 border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-                This preview is stale. Recalculate before saving the batch.
+                Academic data has changed. Calculate again before saving.
               </p>
             )}
             {savedBatchCount !== null && (
@@ -1130,8 +1122,8 @@ function GpaWorkspace({
             )}
             {screen.response.students.length === 0 ? (
               <p className="mt-5 border border-dashed border-[var(--app-border)] p-8 text-center text-xs text-[var(--app-muted)]">
-                No students have complete Result coverage in this scope. Review
-                the skipped students and their missing courses below.
+                No students have complete results for this selection. Review the
+                missing courses below.
               </p>
             ) : (
               <>
@@ -1272,16 +1264,12 @@ function GpaWorkspace({
         title={savedSummary ? "Update saved summary?" : "Save GPA summary?"}
         description={
           screen.kind === "single-ready"
-            ? `The backend will recalculate ${screen.response.student.name}'s selected scope before saving.`
+            ? `Calculate and save ${screen.response.student.name}'s GPA summary?`
             : undefined
         }
       >
         {screen.kind === "single-ready" && (
           <>
-            <p className="text-xs text-[var(--app-muted)]">
-              Only the student and scope IDs are submitted. Preview totals and
-              GPA values are never sent.
-            </p>
             <RequestError>
               {saveSingle.isError
                 ? normalizeApiError(saveSingle.error).message
@@ -1316,7 +1304,7 @@ function GpaWorkspace({
         title="Save batch summaries?"
         description={
           screen.kind === "batch-ready"
-            ? `Recalculate and save ${screen.response.students.length} calculated ${screen.response.students.length === 1 ? "student" : "students"} for the selected scope. ${screen.response.incompleteStudents.length} ${screen.response.incompleteStudents.length === 1 ? "student is" : "students are"} incomplete and will be skipped.`
+            ? `Save GPA summaries for ${screen.response.students.length} ${screen.response.students.length === 1 ? "student" : "students"}? ${screen.response.incompleteStudents.length} ${screen.response.incompleteStudents.length === 1 ? "student has" : "students have"} incomplete results and will be skipped.`
             : undefined
         }
       >

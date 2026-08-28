@@ -269,8 +269,8 @@ export default function CreatePublicCalculatorPage() {
             Create a calculator
           </h1>
           <p className="mt-2.5 max-w-2xl text-xs text-[var(--app-muted)]">
-            Create identity and optional academic configuration first. Courses
-            and credit units are added after creation.
+            Add the calculator details first. Courses and credit units can be
+            added after creation.
           </p>
         </header>
         <form

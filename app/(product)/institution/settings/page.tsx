@@ -5,7 +5,7 @@ export default function Page() {
       area="institution"
       eyebrow="Institution administration"
       title="Institution settings"
-      copy="Configure academic structure, grading rules, roles, approval paths, and tenant-specific access policy."
+      copy="Manage academic structure, grading rules, roles, and approval paths."
     />
   );
 }

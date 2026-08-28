@@ -110,8 +110,7 @@ export default function PricingPage() {
           ))}
         </div>
         <p className="mx-auto mt-8 max-w-2xl px-6 text-center text-xs leading-relaxed text-muted">
-          A final commercial price should be published only after hosting,
-          support, storage, and onboarding costs have been validated.
+          Contact us for pricing based on your institution&apos;s size and needs.
         </p>
       </section>
       <Footer />

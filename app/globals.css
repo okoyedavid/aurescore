@@ -162,6 +162,7 @@ html.app-surface body,
   border-color: var(--app-border);
   background: var(--app-panel);
   color: var(--app-text);
+  font-size: 1rem;
 }
 
 .form-field {
@@ -173,7 +174,8 @@ html.app-surface body,
   background: var(--app-panel, #fff);
   padding: 0.75rem 0.875rem;
   color: var(--app-text, #0d0d0d);
-  font-size: 0.875rem;
+  /* iOS Safari zooms the visual viewport when focused controls are below 16px. */
+  font-size: 1rem;
   font-weight: 400;
   outline: none;
   transition:

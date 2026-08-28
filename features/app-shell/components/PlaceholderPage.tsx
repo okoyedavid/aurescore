@@ -28,8 +28,7 @@ export default function PlaceholderPage({
         </header>
         <section className="app-panel mt-8 border border-[var(--app-border)] p-8">
           <p className="text-xs text-[var(--app-muted)]">
-            This view establishes the product area and navigation boundary. Its
-            data operations will connect to the application backend.
+            This area is coming soon.
           </p>
         </section>
       </div>

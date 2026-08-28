@@ -302,7 +302,7 @@ describe("public calculator UI", () => {
     });
     expect(
       await screen.findByText(
-        "No configured Courses are available for this Level and Term.",
+        "No courses are available for this level and term.",
       ),
     ).toBeVisible();
     expect(
@@ -341,7 +341,7 @@ describe("public calculator UI", () => {
       target: { value: "session_2" },
     });
     expect(screen.getByText(/CSC201/)).toBeVisible();
-    expect(screen.getByText(/1 Course is unavailable/)).toBeVisible();
+    expect(screen.getByText(/1 course is missing/)).toBeVisible();
   });
 
   it("sends score zero without units and renders authoritative backend GPA, CGPA, grade, and points", async () => {
@@ -451,7 +451,7 @@ describe("public calculator UI", () => {
     expect(screen.getByLabelText("Grade for Algorithms")).toHaveValue("F");
     fireEvent.click(screen.getByRole("button", { name: "Clear calculation" }));
     expect(
-      screen.getByText("Calculate and add your first Term."),
+      screen.getByText("Add your first term."),
     ).toBeVisible();
   });
 

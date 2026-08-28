@@ -489,7 +489,7 @@ export default function CourseManager({
         open={Boolean(deleting)}
         onClose={() => !mutations.remove.isPending && setDeleting(null)}
         title="Delete Course?"
-        description={`Delete “${deleting?.name ?? "this Course"}”? This configuration change may unpublish the calculator.`}
+        description={`Delete “${deleting?.name ?? "this course"}”? This change may unpublish the calculator.`}
       >
         <RequestError>
           {mutations.remove.isError

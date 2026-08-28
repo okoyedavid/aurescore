@@ -124,11 +124,10 @@ export default function WorkspaceOverviewPage({
           </section>
           <section className="app-panel mt-6 border border-[var(--app-border)] p-6">
             <h2 className="font-display text-xl font-semibold">
-              Workspace privacy
+              Workspace access
             </h2>
             <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--app-muted)]">
-              All resources shown here are scoped to this workspace. Access is
-              checked by the server on every request.
+              Only workspace members can access these records.
             </p>
           </section>
           <DangerZone workspace={workspace} />

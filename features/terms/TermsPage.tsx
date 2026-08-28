@@ -3,23 +3,23 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of use"
-      intro="These provisional terms explain the boundaries of the AureScore prototype. Production terms require legal review before institutions or students rely on the service."
+      intro="These terms explain the conditions for using AureScore."
       sections={[
         {
           title: "Permitted use",
-          copy: "Use the prototype only for evaluation, demonstration, and project assessment. Do not upload real confidential academic records or credentials reused on another service.",
+          copy: "Use AureScore only for lawful academic work that you are authorised to perform. Do not upload records you do not have permission to manage.",
         },
         {
           title: "Institutional responsibility",
-          copy: "An institution adopting a production version would remain responsible for lawful processing, authorised users, grading policy, approval design, record retention, and the accuracy of source information.",
+          copy: "Institutions remain responsible for authorised users, grading policies, approval processes, record retention, and the accuracy of information entered into AureScore.",
         },
         {
           title: "Service availability",
-          copy: "The prototype is provided without a production availability commitment. Hosting, support, incident response, backups, and service levels must be agreed before deployment.",
+          copy: "Service availability and support arrangements may vary. Any institution-specific commitments must be agreed in writing.",
         },
         {
-          title: "Future agreement",
-          copy: "Commercial use will require complete terms covering privacy, security responsibilities, acceptable use, support, pricing, intellectual property, and termination.",
+          title: "Changes to these terms",
+          copy: "These terms may be updated as AureScore grows. Material changes will be reflected on this page.",
         },
       ]}
     />

@@ -331,7 +331,7 @@ describe("GPA workspace flow", () => {
     fireEvent.change(screen.getByLabelText("Grading scheme"), {
       target: { value: "cm-grading" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Update offering" }));
+    fireEvent.click(screen.getByRole("button", { name: "Update course" }));
     await waitFor(() => expect(apiMock.history.patch).toHaveLength(1));
     expect(JSON.parse(apiMock.history.patch[0].data)).toEqual({
       assessmentSchemeId: "cm-assessment",
@@ -425,7 +425,7 @@ describe("GPA workspace flow", () => {
       client.setQueryData(workspaceKeys.academicRevision("cm-one"), 1);
     });
 
-    expect(await screen.findByText(/This preview is stale/)).toBeVisible();
+    expect(await screen.findByText(/Academic data has changed/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Save summary" })).toBeDisabled();
   });
 
@@ -441,7 +441,7 @@ describe("GPA workspace flow", () => {
     renderClient(<WorkspaceGpaPage workspaceId="cm-one" />);
     await selectSingleScope();
     fireEvent.click(screen.getByRole("button", { name: "Preview GPA" }));
-    expect(await screen.findByText(/no summary to save/i)).toBeVisible();
+    expect(await screen.findByText(/no current GPA to save/i)).toBeVisible();
     expect(screen.getByRole("button", { name: "Save summary" })).toBeDisabled();
   });
 
@@ -550,7 +550,7 @@ describe("GPA workspace flow", () => {
     fireEvent.click(screen.getByLabelText("All applicable"));
     fireEvent.click(screen.getByRole("button", { name: "Preview GPA" }));
     expect(
-      await screen.findByRole("heading", { name: "Batch GPA preview" }),
+      await screen.findByRole("heading", { name: "GPA preview" }),
     ).toBeVisible();
     expect(screen.getAllByText("Ada Lovelace")[0]).toBeVisible();
     expect(JSON.parse(apiMock.history.post[0].data)).toEqual({
@@ -562,8 +562,8 @@ describe("GPA workspace flow", () => {
       screen.getByRole("button", { name: "Save batch summaries" }),
     );
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveTextContent("1 calculated student");
-    expect(dialog).toHaveTextContent("1 student is incomplete");
+    expect(dialog).toHaveTextContent("Save GPA summaries for 1 student?");
+    expect(dialog).toHaveTextContent("1 student has incomplete results");
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Save 1 summary" }),
     );
@@ -591,7 +591,7 @@ describe("GPA workspace flow", () => {
     });
     fireEvent.click(screen.getByLabelText("All applicable"));
     const scopePanel = screen
-      .getByRole("heading", { name: "Calculation scope" })
+      .getByRole("heading", { name: "Results to include" })
       .closest("form");
     expect(scopePanel).toHaveClass(
       "app-panel",
@@ -601,7 +601,7 @@ describe("GPA workspace flow", () => {
     expect(scopePanel?.className).not.toMatch(/rounded-(?:xl|2xl|3xl)/);
     fireEvent.click(screen.getByRole("button", { name: "Preview GPA" }));
     expect(
-      await screen.findByText(/No students have complete Result coverage/),
+      await screen.findByText(/No students have complete results/),
     ).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Save batch summaries" }),

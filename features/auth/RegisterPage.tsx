@@ -15,8 +15,7 @@ export default function RegisterPage() {
       </p>
       <AuthForm mode="register" />
       <p className="mt-6 text-center text-xs leading-relaxed text-muted">
-        By continuing, you acknowledge that this project is currently a product
-        prototype.
+        By continuing, you agree to the Terms of Use and Privacy Notice.
       </p>
     </div>
   );

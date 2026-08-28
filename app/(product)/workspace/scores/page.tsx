@@ -5,7 +5,7 @@ export default function Page() {
       area="workspace"
       eyebrow="Private workspace"
       title="Score sheets"
-      copy="Create independent class lists, record assessment scores, and compute grades outside an institution tenant."
+      copy="Create class lists, record assessment scores, and calculate grades."
     />
   );
 }

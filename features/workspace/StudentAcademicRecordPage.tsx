@@ -99,8 +99,7 @@ function ResultGroup({
           {scopeName(group)}
         </h3>
         <p className="mt-1 text-xs text-[var(--app-muted)]">
-          Every row is a complete saved Result. GPA coverage requires one row
-          for every CourseOffering in the selected scope.
+          Each row is a saved course result used to calculate GPA and CGPA.
         </p>
       </header>
       {group.results.length === 0 ? (
@@ -343,10 +342,6 @@ function AcademicRecord({
         >
           Grouped results
         </h2>
-        <p className="mt-1 text-xs text-[var(--app-muted)]">
-          Grades and grade points shown here are returned by the backend; they
-          are not inferred in the browser.
-        </p>
         {groups.length === 0 ? (
           <p className="app-panel mt-4 border border-dashed border-[var(--app-border)] p-8 text-center text-xs text-[var(--app-muted)]">
             No academic results are available.

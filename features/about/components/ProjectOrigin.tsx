@@ -18,9 +18,8 @@ export default function ProjectOrigin() {
               </h1>
             </div>
             <p className="text-base leading-relaxed text-muted md:text-lg">
-              This page documents why I built it, the academic problem I chose
-              to address, and how I expanded the work to develop stronger
-              backend architecture and application-security skills.
+              What began as a university project is growing into a platform for
+              managing results, approvals, and academic records.
             </p>
           </div>
         </div>

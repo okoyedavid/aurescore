@@ -169,7 +169,7 @@ export default function SecuritySettings({
               <p className="mt-1 text-xs text-[var(--app-muted)]">
                 {googleLinked
                   ? `Google was linked ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(googleProvider!.linkedAt))}.`
-                  : "Link Google using a fresh, backend-verified authorization."}
+                  : "Connect Google to sign in more quickly."}
               </p>
             </div>
             {googleLinked ? (

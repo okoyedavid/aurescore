@@ -7,25 +7,23 @@ export default function EngineeringExtension() {
         <div className="grid gap-10 lg:grid-cols-[0.58fr_1fr]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
-              Engineering extension
+              Beyond the original project
             </p>
             <h2 className="mt-4 font-display text-4xl font-semibold leading-tight">
-              What I added beyond the report requirements.
+              Growing AureScore into a complete academic platform.
             </h2>
           </div>
           <div className="space-y-5 text-base leading-8 text-muted">
             <p>
-              After defining the original academic workflow, I expanded the
-              project to reinforce concepts that matter in larger SaaS
-              applications. A system serving several institutions cannot be
-              treated as a single shared database with unrestricted users.
+              The original project focused on score compilation and GPA
+              calculation. AureScore now supports a broader journey covering
+              academic setup, result entry, student records, and account
+              security.
             </p>
             <p>
-              This changed the project from a narrow score-calculation tool into
-              an architecture exercise involving tenant boundaries, role-based
-              authorisation, protected operations, and auditable state
-              transitions. It also gave me a practical reason to pivot my
-              backend learning toward NestJS.
+              The long-term goal is a dependable SaaS product that can serve
+              departments and institutions while keeping responsibilities and
+              records clearly separated.
             </p>
           </div>
         </div>

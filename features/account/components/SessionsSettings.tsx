@@ -95,7 +95,7 @@ export default function SessionsSettings() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <SettingsHeading
             title="Sessions and devices"
-            copy="Review authentication sessions. Device descriptions are estimates based on the supplied name or browser user agent."
+            copy="Review the devices signed in to your account."
           />
           <Button
             type="button"
@@ -205,7 +205,7 @@ export default function SessionsSettings() {
         }
         description={
           selected?.isCurrent
-            ? "This explicitly revokes your current session and returns you to sign in."
+            ? "This signs out the current device and returns you to sign in."
             : "The selected device will need to sign in again. Your current session remains active."
         }
       >

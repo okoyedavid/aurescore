@@ -142,7 +142,7 @@ export default function ProfileSettings({ user }: { user: AccountUser }) {
     }
     if (!hasProfileImageUploader()) {
       setUploadError(
-        "Profile image uploads are unavailable until a storage provider is configured.",
+        "Profile image uploads are currently unavailable.",
       );
       return;
     }

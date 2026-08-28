@@ -36,13 +36,13 @@ export const academicScope = [
 export const engineeringScope = [
   {
     icon: Layers3,
-    title: "Multi-tenant design",
-    copy: "I extended the data model beyond a single department so that separate institutions and private workspaces can remain logically isolated.",
+    title: "Institution workspaces",
+    copy: "Separate workspaces help departments and institutions organise their academic records.",
   },
   {
     icon: Braces,
-    title: "NestJS learning pivot",
-    copy: "I chose NestJS for the planned backend to strengthen my understanding of modular architecture, dependency injection, validation, guards, and domain boundaries.",
+    title: "A growing product",
+    copy: "The project continues to expand from score calculation into a broader academic platform.",
   },
   {
     icon: KeyRound,
@@ -51,7 +51,7 @@ export const engineeringScope = [
   },
   {
     icon: ShieldCheck,
-    title: "Access-control boundaries",
-    copy: "The expanded design treats tenant isolation, least privilege, protected operations, and traceable approval decisions as core requirements.",
+    title: "Protected academic records",
+    copy: "Access controls and clear responsibilities help keep sensitive academic records protected.",
   },
 ];

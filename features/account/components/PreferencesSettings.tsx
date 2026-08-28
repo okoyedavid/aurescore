@@ -53,7 +53,7 @@ export default function PreferencesSettings({ user }: { user: AccountUser }) {
           <div>
             <p className="text-sm font-semibold">Dark appearance</p>
             <p className="mt-1 text-xs leading-relaxed text-[var(--app-muted)]">
-              Stored only on this browser and not sent to your account.
+              Saved on this device.
             </p>
           </div>
           <Toggle

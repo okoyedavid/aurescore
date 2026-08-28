@@ -18,15 +18,13 @@ export default function PublicCalculatorCataloguePage() {
       <section className="border-b border-line bg-white">
         <div className="mx-auto max-w-6xl px-6 py-16 md:px-10 md:py-20">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
-            Anonymous academic tools
+            GPA calculators
           </p>
           <h1 className="mt-4 max-w-3xl font-display text-5xl font-semibold leading-none md:text-7xl">
             Public GPA calculators
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted">
-            Choose a published calculator configured by an institution or
-            department. Your entries remain in this browser unless you submit
-            them for a stateless calculation.
+            Choose a calculator to get started.
           </p>
         </div>
       </section>
@@ -93,7 +91,7 @@ export default function PublicCalculatorCataloguePage() {
                 </p>
                 <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-muted">
                   {item.description ||
-                    "Open this calculator to enter Courses and calculate GPA."}
+                    "Enter your results and calculate your GPA."}
                 </p>
                 <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">
                   Open calculator{" "}
