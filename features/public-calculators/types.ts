@@ -183,13 +183,17 @@ export type CalculationInputContext = {
   levelId?: string;
 };
 
+export type AttemptType = "REGULAR" | "CARRYOVER";
+
 export type ScoreCalculationEntry = CalculationInputContext & {
   courseId: string;
   score: number;
+  attemptType?: AttemptType;
 };
 export type GradeCalculationEntry = CalculationInputContext & {
   courseId: string;
   grade: string;
+  attemptType?: AttemptType;
 };
 export type PublicCalculationEntry =
   | ScoreCalculationEntry
@@ -216,6 +220,7 @@ export type CalculatedCourse = {
   gradePoint: DecimalString;
   creditUnits: DecimalString;
   qualityPoints: DecimalString;
+  attemptType: AttemptType;
 };
 
 export type CalculationTotals = {
@@ -245,14 +250,46 @@ export type PublicCalculationResponse = CalculationTotals & {
   sessions: Array<CalculationTotals & { session: CalculationDimension | null }>;
 };
 
+export type EntryMode = "score" | "grade";
+
+export type CalculationDraftGroup = {
+  sessionId: string;
+  levelId: string;
+  termId: string;
+  mode: EntryMode;
+  entries: Array<{
+    attemptId: string;
+    courseId: string;
+    value: string;
+    attemptType: AttemptType;
+    /** Legacy local draft linkage retained only for v3 migration. */
+    isCarryover?: boolean;
+    repeatedFromId?: string;
+    originalLevelId?: string;
+    originalTermId?: string;
+  }>;
+  updatedAt: string;
+};
+
 export type CalculatorDraft = {
-  version: 1;
+  version: 4;
+  calculatorId: string;
   updatedAt: string;
   configurationFingerprint: string;
-  mode: "score" | "grade";
-  sessionId: string;
-  termId: string;
-  levelId: string;
-  selectedCourseIds: string[];
-  inputs: Record<string, string>;
+  current: {
+    mode: EntryMode;
+    sessionId: string;
+    termId: string;
+    levelId: string;
+    inputs: Record<string, string>;
+    carryovers: Array<{
+      attemptId: string;
+      courseId: string;
+      originalLevelId: string;
+      originalTermId: string;
+      attemptType: AttemptType;
+      repeatedFromId?: string;
+    }>;
+  };
+  groups: CalculationDraftGroup[];
 };

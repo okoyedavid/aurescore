@@ -97,7 +97,7 @@ html.app-surface body,
 }
 
 .app-panel {
-  background: var(--app-panel);
+  background: var(--app-panel, #ffffff);
 }
 
 /* Keep the public component language intact while product controls follow the
@@ -389,35 +389,5 @@ a:hover .circle-arrow {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-@media print {
-  body {
-    background: #fff !important;
-  }
-
-  body > * {
-    visibility: hidden;
-  }
-
-  .public-calculator-report,
-  .public-calculator-report * {
-    visibility: visible;
-  }
-
-  .public-calculator-report {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    color: #0d0d0d;
-  }
-
-  .public-calculator-report table {
-    page-break-inside: auto;
-  }
-
-  .public-calculator-report tr {
-    page-break-inside: avoid;
   }
 }

@@ -34,19 +34,30 @@ const term: CalculatorTermOrLevel = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
+const level: CalculatorTermOrLevel = {
+  ...term,
+  id: "level_cuid",
+  name: "200 Level",
+  code: "200",
+};
 const course: CalculatorCourse = {
   id: "course_cuid",
   publicCalculatorId: "calc_cuid",
   name: "Algorithms",
   code: "CSC201",
-  levelId: null,
+  levelId: level.id,
   termId: term.id,
   creditUnits: "3.00",
   order: 1,
   metadata: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
-  level: null,
+  level: {
+    id: level.id,
+    name: level.name,
+    code: level.code,
+    order: level.order,
+  },
   term: { id: term.id, name: term.name, code: term.code, order: term.order },
 };
 
@@ -62,9 +73,19 @@ function calculator(
     isPublished: true,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
-    sessions: [],
+    sessions: [
+      {
+        id: "session_cuid",
+        publicCalculatorId: "calc_cuid",
+        name: "2025/2026",
+        order: 1,
+        metadata: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ],
     terms: [term],
-    levels: [],
+    levels: [level],
     courses: [course],
     gradingScheme: {
       id: "scheme_cuid",
@@ -148,8 +169,20 @@ describe("public calculator management", () => {
         id: "new_course",
         name: input.name,
         code: input.code,
-        termId: null,
-        term: null,
+        levelId: input.levelId,
+        termId: input.termId,
+        level: {
+          id: level.id,
+          name: level.name,
+          code: level.code,
+          order: level.order,
+        },
+        term: {
+          id: term.id,
+          name: term.name,
+          code: term.code,
+          order: term.order,
+        },
         creditUnits: String(input.creditUnits),
       };
       current = {
@@ -166,14 +199,22 @@ describe("public calculator management", () => {
         initialTab="courses"
       />,
     );
-    expect(await screen.findByText("Algorithms")).toBeVisible();
+    expect(
+      await screen.findByRole("button", { name: "Edit Algorithms" }),
+    ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Add Course" }));
     const dialog = screen.getByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Name"), {
+    fireEvent.change(within(dialog).getByLabelText("Course Name *"), {
       target: { value: "Databases" },
     });
-    fireEvent.change(within(dialog).getByLabelText("Credit units"), {
+    fireEvent.change(within(dialog).getByLabelText("Credit Units *"), {
       target: { value: "4" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Level *"), {
+      target: { value: level.id },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Term *"), {
+      target: { value: term.id },
     });
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Save Course" }),
@@ -182,8 +223,8 @@ describe("public calculator management", () => {
     expect(JSON.parse(apiMock.history.post[0].data)).toMatchObject({
       name: "Databases",
       creditUnits: 4,
-      levelId: null,
-      termId: null,
+      levelId: level.id,
+      termId: term.id,
     });
     await waitFor(() => expect(screen.getByText("Unpublished")).toBeVisible());
     expect(
@@ -213,12 +254,8 @@ describe("public calculator management", () => {
     expect(
       await screen.findByText("Grading scheme configured: Needs attention"),
     ).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Publish" }));
-    expect(
-      await screen.findByText(
-        "Add a grading scheme and at least one Course before publishing.",
-      ),
-    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Publish" })).toBeDisabled();
+    expect(apiMock.history.post).toHaveLength(0);
     expect(screen.getAllByText("Unpublished").length).toBeGreaterThan(0);
   });
 

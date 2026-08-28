@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useRef, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select, Textarea } from "@/components/ui/FormField";
@@ -12,6 +12,11 @@ import {
   RequestError,
 } from "@/features/workspace/components/FieldError";
 import { useCalculatorCourseMutations, useCalculatorCourses } from "../hooks";
+import {
+  byDimensionOrder,
+  groupCourses,
+  missingCourseFields,
+} from "../hierarchy";
 import type { CalculatorCourse, CalculatorTermOrLevel } from "../types";
 import {
   normalizeCourse,
@@ -32,10 +37,7 @@ export default function CourseManager({
   const [levelId, setLevelId] = useState("");
   const [termId, setTermId] = useState("");
   const [search, setSearch] = useState("");
-  const query = useCalculatorCourses(calculatorId, {
-    ...(levelId ? { levelId } : {}),
-    ...(termId ? { termId } : {}),
-  });
+  const query = useCalculatorCourses(calculatorId);
   const mutations = useCalculatorCourseMutations(calculatorId);
   const [editing, setEditing] = useState<CalculatorCourse | null | undefined>(
     undefined,
@@ -44,15 +46,40 @@ export default function CourseManager({
   const [errors, setErrors] = useState<CalculatorFieldErrors>({});
   const locked = useRef(false);
   const mutation = editing?.id ? mutations.update : mutations.create;
+  const sortedLevels = useMemo(
+    () => levels.slice().sort(byDimensionOrder),
+    [levels],
+  );
+  const sortedTerms = useMemo(
+    () => terms.slice().sort(byDimensionOrder),
+    [terms],
+  );
   const courses = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase();
     return (query.data ?? []).filter(
       (course) =>
-        !needle ||
-        course.name.toLocaleLowerCase().includes(needle) ||
-        course.code?.toLocaleLowerCase().includes(needle),
+        (!levelId || course.levelId === levelId) &&
+        (!termId || course.termId === termId) &&
+        (!needle ||
+          `${course.code ?? ""} ${course.name}`
+            .toLocaleLowerCase()
+            .includes(needle)),
     );
-  }, [query.data, search]);
+  }, [levelId, query.data, search, termId]);
+  const incomplete = useMemo(
+    () => courses.filter((course) => missingCourseFields(course).length),
+    [courses],
+  );
+  const grouped = useMemo(
+    () => groupCourses(courses, levels, terms),
+    [courses, levels, terms],
+  );
+
+  function openEditor(course: CalculatorCourse | null) {
+    setErrors({});
+    (course ? mutations.update : mutations.create).reset();
+    setEditing(course);
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,6 +126,40 @@ export default function CourseManager({
     } catch {}
   }
 
+  const courseRow = (course: CalculatorCourse) => (
+    <li
+      key={course.id}
+      className="app-panel flex items-start gap-3 border-b border-r border-[var(--app-border)] p-4 sm:p-5"
+    >
+      <div className="min-w-0 flex-1">
+        <h5 className="break-words font-semibold">
+          {course.code ? `${course.code} — ` : ""}
+          {course.name}
+        </h5>
+        <p className="mt-1 text-xs text-[var(--app-muted)]">
+          {course.creditUnits} credit units
+        </p>
+      </div>
+      <button
+        className="app-icon-button"
+        aria-label={`Edit ${course.name}`}
+        onClick={() => openEditor(course)}
+      >
+        <Pencil size={15} />
+      </button>
+      <button
+        className="app-icon-button text-red-600"
+        aria-label={`Delete ${course.name}`}
+        onClick={() => {
+          mutations.remove.reset();
+          setDeleting(course);
+        }}
+      >
+        <Trash2 size={15} />
+      </button>
+    </li>
+  );
+
   return (
     <section aria-labelledby="calculator-courses-heading">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -107,23 +168,24 @@ export default function CourseManager({
             id="calculator-courses-heading"
             className="font-display text-2xl font-semibold"
           >
-            Courses and credit units
+            Courses
           </h2>
           <p className="mt-1 text-xs text-[var(--app-muted)]">
-            Course changes automatically unpublish the calculator until you
-            review and publish it again.
+            Every public Course needs a Level, Term, and positive credit units.
           </p>
         </div>
         <Button
-          onClick={() => {
-            setErrors({});
-            mutations.create.reset();
-            setEditing(null);
-          }}
+          disabled={!levels.length || !terms.length}
+          onClick={() => openEditor(null)}
         >
           <Plus size={15} /> Add Course
         </Button>
       </div>
+      {(!levels.length || !terms.length) && (
+        <p className="mt-4 border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+          Create at least one Level and one Term before adding Courses.
+        </p>
+      )}
       <div className="app-panel mt-5 grid gap-4 border border-[var(--app-border)] p-5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
         <label className="text-xs font-semibold">
           Level filter
@@ -133,9 +195,9 @@ export default function CourseManager({
             className="mt-1"
           >
             <option value="">All Levels</option>
-            {levels.map((level) => (
-              <option key={level.id} value={level.id}>
-                {level.name}
+            {sortedLevels.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
               </option>
             ))}
           </Select>
@@ -148,9 +210,9 @@ export default function CourseManager({
             className="mt-1"
           >
             <option value="">All Terms</option>
-            {terms.map((term) => (
-              <option key={term.id} value={term.id}>
-                {term.name}
+            {sortedTerms.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
               </option>
             ))}
           </Select>
@@ -200,68 +262,104 @@ export default function CourseManager({
           </button>
         </div>
       )}
-      {!query.isPending && !query.isError && courses.length === 0 && (
+      {!query.isPending && !query.isError && !courses.length && (
         <p className="app-panel mt-5 border border-dashed border-[var(--app-border)] p-10 text-center text-xs text-[var(--app-muted)]">
           {levelId || termId || search
             ? "No Courses match these filters."
             : "No Courses yet."}
         </p>
       )}
-      {courses.length > 0 && (
-        <ul className="mt-5 grid border-l border-t border-[var(--app-border)] md:grid-cols-2">
-          {courses.map((course) => (
-            <li
-              key={course.id}
-              className="app-panel flex items-start gap-3 border-b border-r border-[var(--app-border)] p-5"
+      {incomplete.length > 0 && (
+        <section
+          className="mt-5 border border-amber-300 bg-amber-50 p-5"
+          aria-labelledby="incomplete-courses-heading"
+        >
+          <h3
+            id="incomplete-courses-heading"
+            className="flex items-center gap-2 font-semibold text-amber-950"
+          >
+            <AlertTriangle size={17} /> Incomplete legacy Courses
+          </h3>
+          <p className="mt-1 text-xs text-amber-900">
+            These Courses are excluded from public calculation until their setup
+            is complete.
+          </p>
+          <ul className="mt-4 grid gap-3 md:grid-cols-2">
+            {incomplete.map((course) => (
+              <li
+                key={course.id}
+                className="flex items-center justify-between gap-3 border border-amber-300 bg-white p-4"
+              >
+                <div className="min-w-0">
+                  <p className="break-words font-semibold">
+                    {course.code ? `${course.code} — ` : ""}
+                    {course.name}
+                  </p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    Missing: {missingCourseFields(course).join(", ")}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => openEditor(course)}
+                >
+                  Complete setup
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {grouped.length > 0 && (
+        <div className="mt-6 space-y-8">
+          {grouped.map(({ level, terms: groups }) => (
+            <section
+              key={level.id}
+              aria-labelledby={`creator-level-${level.id}`}
             >
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold">{course.name}</h3>
-                <p className="mt-1 text-xs text-[var(--app-muted)]">
-                  {course.code || "No code"} · {course.creditUnits} credit units
-                </p>
-                <p className="mt-1 text-xs text-[var(--app-muted)]">
-                  {course.level?.name || "Any Level"} ·{" "}
-                  {course.term?.name || "Any Term"}
-                </p>
+              <h3
+                id={`creator-level-${level.id}`}
+                className="border-b-2 border-[var(--app-text)] pb-2 font-display text-xl font-semibold uppercase"
+              >
+                {level.name}
+              </h3>
+              <div className="mt-4 space-y-6">
+                {groups.map(({ term, courses: rows }) => (
+                  <section
+                    key={term.id}
+                    aria-labelledby={`creator-term-${term.id}`}
+                  >
+                    <h4
+                      id={`creator-term-${term.id}`}
+                      className="text-xs font-bold uppercase tracking-[0.12em] text-blue-600"
+                    >
+                      {term.name}
+                    </h4>
+                    <ul className="mt-2 grid border-l border-t border-[var(--app-border)] md:grid-cols-2">
+                      {rows.map(courseRow)}
+                    </ul>
+                  </section>
+                ))}
               </div>
-              <button
-                className="app-icon-button"
-                aria-label={`Edit ${course.name}`}
-                onClick={() => {
-                  setErrors({});
-                  mutations.update.reset();
-                  setEditing(course);
-                }}
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                className="app-icon-button text-red-600"
-                aria-label={`Delete ${course.name}`}
-                onClick={() => {
-                  mutations.remove.reset();
-                  setDeleting(course);
-                }}
-              >
-                <Trash2 size={15} />
-              </button>
-            </li>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
       <Dialog
         open={editing !== undefined}
         onClose={() => !mutation.isPending && setEditing(undefined)}
         title={editing ? "Edit Course" : "Add Course"}
-        description="Credit units are fixed for visitors and used by the backend calculation."
+        description="Level, Term, and credit units are required stable Course properties."
         className="max-w-2xl!"
       >
         <form onSubmit={save} noValidate className="space-y-4">
           <label className="block text-sm font-semibold">
-            Name
+            Course Name *
             <Input
               name="name"
               autoFocus
+              required
               defaultValue={editing?.name ?? ""}
               className="mt-1"
               aria-invalid={Boolean(errors["course.name"])}
@@ -270,7 +368,7 @@ export default function CourseManager({
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-semibold">
-              Code{" "}
+              Course Code{" "}
               <span className="font-normal text-[var(--app-muted)]">
                 (optional)
               </span>
@@ -283,12 +381,13 @@ export default function CourseManager({
               <FieldError>{errors["course.code"]}</FieldError>
             </label>
             <label className="text-sm font-semibold">
-              Credit units
+              Credit Units *
               <Input
                 name="creditUnits"
                 type="number"
                 min="0.001"
                 step="0.001"
+                required
                 defaultValue={editing?.creditUnits ?? ""}
                 className="mt-1"
                 aria-invalid={Boolean(errors["course.creditUnits"])}
@@ -296,40 +395,40 @@ export default function CourseManager({
               <FieldError>{errors["course.creditUnits"]}</FieldError>
             </label>
             <label className="text-sm font-semibold">
-              Level{" "}
-              <span className="font-normal text-[var(--app-muted)]">
-                (optional)
-              </span>
+              Level *
               <Select
                 name="levelId"
+                required
                 defaultValue={editing?.levelId ?? ""}
                 className="mt-1"
+                aria-invalid={Boolean(errors["course.levelId"])}
               >
-                <option value="">Any Level</option>
-                {levels.map((level) => (
-                  <option key={level.id} value={level.id}>
-                    {level.name}
+                <option value="">Select Level</option>
+                {sortedLevels.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
                   </option>
                 ))}
               </Select>
+              <FieldError>{errors["course.levelId"]}</FieldError>
             </label>
             <label className="text-sm font-semibold">
-              Term{" "}
-              <span className="font-normal text-[var(--app-muted)]">
-                (optional)
-              </span>
+              Term *
               <Select
                 name="termId"
+                required
                 defaultValue={editing?.termId ?? ""}
                 className="mt-1"
+                aria-invalid={Boolean(errors["course.termId"])}
               >
-                <option value="">Any Term</option>
-                {terms.map((term) => (
-                  <option key={term.id} value={term.id}>
-                    {term.name}
+                <option value="">Select Term</option>
+                {sortedTerms.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
                   </option>
                 ))}
               </Select>
+              <FieldError>{errors["course.termId"]}</FieldError>
             </label>
             <label className="text-sm font-semibold">
               Order{" "}

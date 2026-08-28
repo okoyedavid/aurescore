@@ -1,19 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowLeft,
   Calculator,
   Check,
-  Clipboard,
   Pencil,
-  Printer,
-  RotateCcw,
+  PlusCircle,
+  RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import SiteHeader from "@/components/layout/SiteHeader";
 import Footer from "@/components/layout/Footer";
 import { Button, ButtonLink } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/FormField";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
@@ -27,767 +30,1475 @@ import {
   readCalculatorDraft,
   writeCalculatorDraft,
 } from "./draft";
+import {
+  byCourseOrder,
+  byDimensionOrder,
+  groupCourses,
+  missingCourseFields,
+} from "./hierarchy";
 import { usePublicCalculation, usePublicCalculator } from "./hooks";
 import type {
-  CalculationDimension,
+  AttemptType,
+  CalculationDraftGroup,
+  CalculatedCourse,
+  EntryMode,
+  PublicCalculationEntry,
   PublicCalculationResponse,
+  PublicCourse,
   PublicCalculatorDetail,
 } from "./types";
-import { buildCalculationEntries, eligibleCourses } from "./validation";
+import { buildCalculationEntries } from "./validation";
 
-type EntryMode = "score" | "grade";
+const PdfReportButton = dynamic(() => import("./components/PdfReportButton"), {
+  ssr: false,
+  loading: () => (
+    <span className="text-sm text-muted">Preparing report tools…</span>
+  ),
+});
+type CurrentDraft = {
+  mode: EntryMode;
+  sessionId: string;
+  levelId: string;
+  termId: string;
+  inputs: Record<string, string>;
+  carryovers: Array<{
+    attemptId: string;
+    courseId: string;
+    originalLevelId: string;
+    originalTermId: string;
+    attemptType: AttemptType;
+    repeatedFromId?: string;
+  }>;
+};
+const emptyCurrent = (): CurrentDraft => ({
+  mode: "score",
+  sessionId: "",
+  levelId: "",
+  termId: "",
+  inputs: {},
+  carryovers: [],
+});
+const groupKey = (
+  value: Pick<CalculationDraftGroup, "sessionId" | "levelId" | "termId">,
+) => `${value.sessionId}:${value.levelId}:${value.termId}`;
 
-const dimensionLabel = (dimension: CalculationDimension | null) =>
-  dimension?.name ?? "Unspecified";
+function entriesForGroup(
+  group: CalculationDraftGroup,
+): PublicCalculationEntry[] {
+  return group.entries.map((entry) => ({
+    courseId: entry.courseId,
+    ...(group.mode === "score"
+      ? { score: Number(entry.value) }
+      : { grade: entry.value }),
+    sessionId: group.sessionId,
+    levelId: group.levelId,
+    termId: group.termId,
+    attemptType: entry.attemptType,
+  }));
+}
 
-function ResultTotals({
-  label,
-  totalCreditUnits,
-  totalQualityPoints,
-  gpa,
-}: {
-  label: string;
-  totalCreditUnits: string;
-  totalQualityPoints: string;
-  gpa: string | null;
-}) {
+function isCarryoverEligible(
+  course: PublicCourse,
+  selectedLevelId: string,
+  selectedTermId: string,
+  levels: PublicCalculatorDetail["levels"],
+) {
+  if (!selectedLevelId || !selectedTermId || !course.levelId) return false;
+  const originalLevel = levels.find((level) => level.id === course.levelId);
+  const currentLevel = levels.find((level) => level.id === selectedLevelId);
   return (
-    <div className="border border-line bg-white p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-        {label}
-      </p>
-      <p className="mt-2 font-display text-3xl font-semibold text-ink">
-        {gpa ?? "Not available"}
-      </p>
-      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <dt className="text-muted">Credit units</dt>
-          <dd className="font-semibold text-ink">{totalCreditUnits}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Quality points</dt>
-          <dd className="font-semibold text-ink">{totalQualityPoints}</dd>
-        </div>
-      </dl>
-    </div>
+    originalLevel?.order != null &&
+    currentLevel?.order != null &&
+    originalLevel.order < currentLevel.order &&
+    course.termId === selectedTermId
   );
 }
 
-function CalculationReport({
+function resultGroup(
+  response: PublicCalculationResponse | undefined,
+  group: CalculationDraftGroup,
+) {
+  return response?.groups.find(
+    (item) =>
+      item.session?.id === group.sessionId &&
+      item.level?.id === group.levelId &&
+      item.term?.id === group.termId,
+  );
+}
+
+function CourseBreakdown({
+  entries,
+}: {
+  entries: CalculatedCourse[];
+}) {
+  return (
+    <>
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="w-full min-w-[700px] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-y border-line bg-cream text-xs uppercase tracking-wide text-muted">
+              <th className="px-3 py-3">Course</th>
+              <th className="px-3 py-3">Score</th>
+              <th className="px-3 py-3">Grade</th>
+              <th className="px-3 py-3">GP</th>
+              <th className="px-3 py-3">Units</th>
+              <th className="px-3 py-3">Quality points</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => (
+              <tr key={entry.course.id} className="border-b border-line">
+                <td className="px-3 py-3 font-semibold">
+                  {entry.course.code ? `${entry.course.code} — ` : ""}
+                  {entry.course.name}{" "}
+                  {entry.attemptType === "CARRYOVER" && (
+                    <span className="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                      Carryover
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-3">{entry.score ?? "—"}</td>
+                <td className="px-3 py-3 font-semibold">{entry.grade}</td>
+                <td className="px-3 py-3">{entry.gradePoint}</td>
+                <td className="px-3 py-3">{entry.creditUnits}</td>
+                <td className="px-3 py-3">{entry.qualityPoints}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul className="divide-y divide-line border-y border-line sm:hidden">
+        {entries.map((entry) => (
+          <li key={entry.course.id} className="py-4">
+            <p className="break-words font-semibold">
+              {entry.course.code ? `${entry.course.code} — ` : ""}
+              {entry.course.name}{" "}
+              {entry.attemptType === "CARRYOVER" && (
+                <span className="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                  Carryover
+                </span>
+              )}
+            </p>
+            <dl className="mt-3 grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <dt className="text-muted">Score</dt>
+                <dd className="mt-1 font-semibold">{entry.score ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted">Grade / GP</dt>
+                <dd className="mt-1 font-semibold">
+                  {entry.grade} / {entry.gradePoint}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">Units / QP</dt>
+                <dd className="mt-1 font-semibold">
+                  {entry.creditUnits} / {entry.qualityPoints}
+                </dd>
+              </div>
+            </dl>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function Breakdown({
   response,
-  context,
-  onEdit,
-  onStartOver,
+  calculator,
 }: {
   response: PublicCalculationResponse;
-  context: string[];
-  onEdit: () => void;
-  onStartOver: () => void;
+  calculator: PublicCalculatorDetail;
 }) {
-  const [copied, setCopied] = useState(false);
-  const singleScope =
-    response.groups.length <= 1 && response.sessions.length <= 1;
-
-  async function copyLink() {
-    const path = response.publicPath;
-    const link = new URL(path, window.location.origin).toString();
-    await navigator.clipboard.writeText(link);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
-  }
-
+  const sessions = calculator.sessions
+    .slice()
+    .sort(byDimensionOrder)
+    .map((session) => ({
+      session,
+      levels: calculator.levels
+        .slice()
+        .sort(byDimensionOrder)
+        .map((level) => ({
+          level,
+          terms: calculator.terms
+            .slice()
+            .sort(byDimensionOrder)
+            .map((term) => ({
+              term,
+              entries: response.entries
+                .filter(
+                  (entry) =>
+                    entry.session?.id === session.id &&
+                    entry.level?.id === level.id &&
+                    entry.term?.id === term.id,
+                )
+                .sort((a, b) =>
+                  byCourseOrder(
+                    {
+                      ...a.course,
+                      levelId: level.id,
+                      termId: term.id,
+                      creditUnits: a.creditUnits,
+                      order:
+                        calculator.courses.find(
+                          (course) => course.id === a.course.id,
+                        )?.order ?? null,
+                    },
+                    {
+                      ...b.course,
+                      levelId: level.id,
+                      termId: term.id,
+                      creditUnits: b.creditUnits,
+                      order:
+                        calculator.courses.find(
+                          (course) => course.id === b.course.id,
+                        )?.order ?? null,
+                    },
+                  ),
+                ),
+              total: response.groups.find(
+                (group) =>
+                  group.session?.id === session.id &&
+                  group.level?.id === level.id &&
+                  group.term?.id === term.id,
+              ),
+            }))
+            .filter((group) => group.entries.length),
+        }))
+        .filter((group) => group.terms.length),
+      total: response.sessions.find((item) => item.session?.id === session.id),
+    }))
+    .filter((group) => group.levels.length);
   return (
     <section
-      aria-labelledby="calculation-result"
-      className="public-calculator-report"
+      className="border border-line bg-white p-5 sm:p-7"
+      aria-labelledby="breakdown-heading"
     >
-      <div className="border border-line bg-white p-6 md:p-8">
-        <div className="flex flex-col justify-between gap-5 border-b border-line pb-6 sm:flex-row sm:items-start">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
-              Calculated with AureScore
-            </p>
-            <h2
-              id="calculation-result"
-              tabIndex={-1}
-              className="mt-2 font-display text-3xl font-semibold outline-none"
-            >
-              {response.calculator.title}
-            </h2>
-            <p className="mt-2 text-sm text-muted">
-              {[
-                response.calculator.institutionName,
-                response.calculator.departmentName,
-              ]
-                .filter(Boolean)
-                .join(" · ") || "Public academic calculator"}
-            </p>
-            {context.length > 0 && (
-              <p className="mt-2 text-sm text-muted">{context.join(" · ")}</p>
-            )}
-          </div>
-          <div className="print:hidden flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              className="min-h-10 px-4"
-              onClick={onEdit}
-            >
-              <Pencil size={15} aria-hidden="true" /> Edit inputs
-            </Button>
-            <Button
-              variant="outline"
-              className="min-h-10 px-4"
-              onClick={onStartOver}
-            >
-              <RotateCcw size={15} aria-hidden="true" /> Start over
-            </Button>
-            <Button
-              variant="outline"
-              className="min-h-10 px-4"
-              onClick={() => void copyLink()}
-            >
-              {copied ? (
-                <Check size={15} aria-hidden="true" />
-              ) : (
-                <Clipboard size={15} aria-hidden="true" />
-              )}
-              {copied ? "Copied" : "Copy link"}
-            </Button>
-            <Button
-              variant="outline"
-              className="min-h-10 px-4"
-              onClick={() => window.print()}
-            >
-              <Printer size={15} aria-hidden="true" /> Print / download
-            </Button>
-          </div>
+      <div className="flex flex-col justify-between gap-4 border-b border-line pb-5 sm:flex-row sm:items-center">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+            Backend-authoritative result
+          </p>
+          <h2
+            id="breakdown-heading"
+            className="mt-1 font-display text-3xl font-semibold"
+          >
+            Calculation breakdown
+          </h2>
         </div>
-
-        <div className="mt-6 grid gap-px border border-line bg-line sm:grid-cols-3">
-          <div className="bg-cream p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {singleScope ? "GPA" : "Overall GPA"}
-            </p>
-            <p className="mt-2 font-display text-4xl font-semibold">
-              {response.gpa ?? "Not available"}
-            </p>
-          </div>
-          {!singleScope && (
-            <div className="bg-cream p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                CGPA
-              </p>
-              <p className="mt-2 font-display text-4xl font-semibold">
-                {response.cgpa ?? "Not available"}
-              </p>
-            </div>
-          )}
-          <div className="bg-cream p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Total credit units
-            </p>
-            <p className="mt-2 font-display text-4xl font-semibold">
-              {response.totalCreditUnits}
-            </p>
-          </div>
-          <div className="bg-cream p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Total quality points
-            </p>
-            <p className="mt-2 font-display text-4xl font-semibold">
-              {response.totalQualityPoints}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-            <caption className="mb-3 text-left font-display text-2xl font-semibold">
-              Course breakdown
-            </caption>
-            <thead>
-              <tr className="border-y border-line text-xs uppercase tracking-wide text-muted">
-                <th className="px-3 py-3">Course</th>
-                <th className="px-3 py-3">Context</th>
-                <th className="px-3 py-3">Score</th>
-                <th className="px-3 py-3">Grade</th>
-                <th className="px-3 py-3">Point</th>
-                <th className="px-3 py-3">Units</th>
-                <th className="px-3 py-3">Quality points</th>
-              </tr>
-            </thead>
-            <tbody>
-              {response.entries.map((entry) => (
-                <tr
-                  key={entry.course.id}
-                  className="border-b border-line align-top"
-                >
-                  <td className="px-3 py-4 font-semibold">
-                    {entry.course.code ? `${entry.course.code} — ` : ""}
-                    {entry.course.name}
-                  </td>
-                  <td className="px-3 py-4 text-muted">
-                    {[entry.session, entry.term, entry.level]
-                      .filter((item): item is CalculationDimension =>
-                        Boolean(item),
-                      )
-                      .map((item) => item.name)
-                      .join(" · ") || "Unspecified"}
-                  </td>
-                  <td className="px-3 py-4">{entry.score ?? "—"}</td>
-                  <td className="px-3 py-4 font-semibold">{entry.grade}</td>
-                  <td className="px-3 py-4">{entry.gradePoint}</td>
-                  <td className="px-3 py-4">{entry.creditUnits}</td>
-                  <td className="px-3 py-4">{entry.qualityPoints}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {response.groups.length > 1 && (
-          <section className="mt-8" aria-labelledby="group-gpas">
-            <h3 id="group-gpas" className="font-display text-2xl font-semibold">
-              Grouped GPA
-            </h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {response.groups.map((group, index) => (
-                <ResultTotals
-                  key={`${group.session?.id ?? "none"}-${group.term?.id ?? "none"}-${group.level?.id ?? "none"}-${index}`}
-                  label={
-                    [group.session, group.term, group.level]
-                      .filter((item): item is CalculationDimension =>
-                        Boolean(item),
-                      )
-                      .map((item) => item.name)
-                      .join(" · ") || "Unspecified context"
-                  }
-                  {...group}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {response.sessions.length > 1 && (
-          <section className="mt-8" aria-labelledby="session-gpas">
-            <h3
-              id="session-gpas"
-              className="font-display text-2xl font-semibold"
-            >
-              Session GPA
-            </h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {response.sessions.map((session, index) => (
-                <ResultTotals
-                  key={`${session.session?.id ?? "none"}-${index}`}
-                  label={dimensionLabel(session.session)}
-                  {...session}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        <p className="mt-8 break-all border-t border-line pt-5 text-xs text-muted">
-          {response.publicPath}
-        </p>
+        <PdfReportButton
+          response={response}
+          calculator={calculator}
+        />
       </div>
+      <div className="mt-5 grid gap-px border border-line bg-line sm:grid-cols-3">
+        <div className="bg-ink p-5 text-white">
+          <p className="text-xs uppercase tracking-wide text-blue-200">CGPA</p>
+          <p className="mt-1 font-display text-4xl font-semibold">
+            {response.cgpa ?? response.gpa ?? "—"}
+          </p>
+        </div>
+        <div className="bg-cream p-5">
+          <p className="text-xs uppercase tracking-wide text-muted">
+            Total credit units
+          </p>
+          <p className="mt-1 font-display text-3xl font-semibold">
+            {response.totalCreditUnits}
+          </p>
+        </div>
+        <div className="bg-cream p-5">
+          <p className="text-xs uppercase tracking-wide text-muted">
+            Total quality points
+          </p>
+          <p className="mt-1 font-display text-3xl font-semibold">
+            {response.totalQualityPoints}
+          </p>
+        </div>
+      </div>
+      <div className="mt-8 space-y-9">
+        {sessions.map(({ session, levels, total }) => (
+          <section
+            key={session.id}
+            aria-labelledby={`result-session-${session.id}`}
+          >
+            <div className="flex flex-wrap items-end justify-between gap-2 border-b-2 border-ink pb-2">
+              <h3
+                id={`result-session-${session.id}`}
+                className="font-display text-2xl font-semibold"
+              >
+                {session.name}
+              </h3>
+              <p className="text-sm font-bold text-blue-700">
+                SESSION GPA: {total?.gpa ?? "—"}
+              </p>
+            </div>
+            <div className="mt-5 space-y-7">
+              {levels.map(({ level, terms }) => (
+                <section key={level.id}>
+                  <h4 className="text-sm font-bold uppercase tracking-[0.12em] text-muted">
+                    {level.name}
+                  </h4>
+                  <div className="mt-4 space-y-6">
+                    {terms.map(({ term, entries, total: termTotal }) => (
+                      <section key={term.id}>
+                        <div className="flex flex-wrap items-center justify-between gap-2 bg-blue-50 px-4 py-3">
+                          <h5 className="font-semibold uppercase">
+                            {term.name}
+                          </h5>
+                          <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-blue-700">
+                            GPA {termTotal?.gpa ?? "—"}
+                          </span>
+                        </div>
+                        <CourseBreakdown entries={entries} />
+                      </section>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+      <p className="mt-8 border-t border-line pt-4 text-xs text-muted">
+        Unofficial calculation based on user-entered academic data.
+      </p>
     </section>
   );
 }
 
-function CalculatorForm({
+function CalculatorWorkspace({
   calculator,
 }: {
   calculator: PublicCalculatorDetail;
 }) {
-  const calculate = usePublicCalculation(calculator.id);
+  const preview = usePublicCalculation(calculator.id);
+  const aggregate = usePublicCalculation(calculator.id);
+  const restoreAggregate = aggregate.mutate;
   const fingerprint = useMemo(
     () => configurationFingerprint(calculator),
     [calculator],
   );
-  const [mode, setMode] = useState<EntryMode>("score");
-  const [sessionId, setSessionId] = useState("");
-  const [termId, setTermId] = useState("");
-  const [levelId, setLevelId] = useState("");
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-  const [inputs, setInputs] = useState<Record<string, string>>({});
-  const [search, setSearch] = useState("");
+  const [current, setCurrent] = useState<CurrentDraft>(emptyCurrent);
+  const [groups, setGroups] = useState<CalculationDraftGroup[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [draftHydrated, setDraftHydrated] = useState(false);
-  const formHeadingRef = useRef<HTMLHeadingElement>(null);
-  const errorHeadingRef = useRef<HTMLHeadingElement>(null);
-
-  const eligible = useMemo(
-    () => eligibleCourses(calculator.courses, termId, levelId),
-    [calculator.courses, levelId, termId],
+  const [hydrated, setHydrated] = useState(false);
+  const [previewKey, setPreviewKey] = useState("");
+  const [carryoverOpen, setCarryoverOpen] = useState(false);
+  const [workspaceNotice, setWorkspaceNotice] = useState("");
+  const errorRef = useRef<HTMLHeadingElement>(null);
+  const validCourses = useMemo(
+    () =>
+      calculator.courses.filter(
+        (course) => !missingCourseFields(course).length,
+      ),
+    [calculator.courses],
   );
-  const visible = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    if (!query) return eligible;
-    return eligible.filter((course) =>
-      `${course.code ?? ""} ${course.name}`.toLocaleLowerCase().includes(query),
-    );
-  }, [eligible, search]);
+  const incompleteCount = calculator.courses.length - validCourses.length;
+  const courses = useMemo(
+    () =>
+      validCourses
+        .filter(
+          (course) =>
+            course.levelId === current.levelId &&
+            course.termId === current.termId,
+        )
+        .sort(byCourseOrder),
+    [current.levelId, current.termId, validCourses],
+  );
+  const sortedSessions = useMemo(
+    () => calculator.sessions.slice().sort(byDimensionOrder),
+    [calculator.sessions],
+  );
+  const sortedLevels = useMemo(
+    () => calculator.levels.slice().sort(byDimensionOrder),
+    [calculator.levels],
+  );
+  const sortedTerms = useMemo(
+    () => calculator.terms.slice().sort(byDimensionOrder),
+    [calculator.terms],
+  );
+  const currentLevelOrder = calculator.levels.find(
+    (level) => level.id === current.levelId,
+  )?.order;
+  const availableCarryoverGroups = useMemo(
+    () =>
+      groupCourses(
+        validCourses.filter(
+          (course) =>
+            isCarryoverEligible(
+              course,
+              current.levelId,
+              current.termId,
+              calculator.levels,
+            ) &&
+            !current.carryovers.some((item) => item.courseId === course.id),
+        ),
+        calculator.levels,
+        calculator.terms,
+      ),
+    [
+      calculator.levels,
+      calculator.terms,
+      current.carryovers,
+      current.levelId,
+      current.termId,
+      validCourses,
+    ],
+  );
+  const contextReady = Boolean(
+    current.sessionId && current.levelId && current.termId,
+  );
+  const currentKey = `${current.sessionId}:${current.levelId}:${current.termId}`;
 
   useEffect(() => {
-    const draft = readCalculatorDraft(calculator.id, fingerprint);
-    const restoredSessionId =
-      draft && calculator.sessions.some((item) => item.id === draft.sessionId)
-        ? draft.sessionId
-        : "";
-    const restoredTermId =
-      draft && calculator.terms.some((item) => item.id === draft.termId)
-        ? draft.termId
-        : "";
-    const restoredLevelId =
-      draft && calculator.levels.some((item) => item.id === draft.levelId)
-        ? draft.levelId
-        : "";
-    const restoredEligibleIds = new Set(
-      eligibleCourses(calculator.courses, restoredTermId, restoredLevelId).map(
-        (course) => course.id,
-      ),
-    );
+    const saved = readCalculatorDraft(calculator.id, fingerprint);
+    const candidateGroups =
+      saved?.groups.filter(
+        (group) =>
+          calculator.sessions.some((item) => item.id === group.sessionId) &&
+          calculator.levels.some((item) => item.id === group.levelId) &&
+          calculator.terms.some((item) => item.id === group.termId) &&
+          group.entries.some((entry) =>
+            validCourses.some((course) => course.id === entry.courseId),
+          ),
+      ) ?? [];
+    const restoredGroups = candidateGroups
+      .map((group) => ({
+        ...group,
+        entries: group.entries
+          .map((entry) => ({
+            ...entry,
+            attemptType: entry.originalLevelId
+              ? ("CARRYOVER" as const)
+              : ("REGULAR" as const),
+          }))
+          .filter((entry) => {
+            if (entry.attemptType !== "CARRYOVER") return true;
+            const course = validCourses.find(
+              (item) => item.id === entry.courseId,
+            );
+            return Boolean(
+              course &&
+                isCarryoverEligible(
+                  course,
+                  group.levelId,
+                  group.termId,
+                  calculator.levels,
+                ),
+            );
+          }),
+      }))
+      .filter((group) => group.entries.length);
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
-      if (draft) {
-        setMode(draft.mode);
-        setSessionId(restoredSessionId);
-        setTermId(restoredTermId);
-        setLevelId(restoredLevelId);
-        setSelectedCourseIds(
-          draft.selectedCourseIds.filter((id) => restoredEligibleIds.has(id)),
-        );
-        setInputs(draft.inputs);
-      }
-      setDraftHydrated(true);
+      if (saved)
+        setCurrent({
+          ...saved.current,
+          sessionId: calculator.sessions.some(
+            (item) => item.id === saved.current.sessionId,
+          )
+            ? saved.current.sessionId
+            : "",
+          levelId: calculator.levels.some(
+            (item) => item.id === saved.current.levelId,
+          )
+            ? saved.current.levelId
+            : "",
+          termId: calculator.terms.some(
+            (item) => item.id === saved.current.termId,
+          )
+            ? saved.current.termId
+            : "",
+          carryovers: saved.current.carryovers
+            .filter((entry) => {
+              const course = validCourses.find(
+                (item) => item.id === entry.courseId,
+              );
+              return Boolean(
+                course &&
+                  isCarryoverEligible(
+                    course,
+                    saved.current.levelId,
+                    saved.current.termId,
+                    calculator.levels,
+                  ),
+              );
+            })
+            .map((entry) => ({
+              ...entry,
+              attemptType: "CARRYOVER" as const,
+            })),
+        });
+      setGroups(restoredGroups);
+      setHydrated(true);
+      if (restoredGroups.length)
+        restoreAggregate({ entries: restoredGroups.flatMap(entriesForGroup) });
     });
     return () => {
       cancelled = true;
     };
-  }, [calculator, fingerprint]);
-
-  useEffect(() => {
-    if (!draftHydrated) return;
-    writeCalculatorDraft(calculator.id, {
-      version: 1,
-      updatedAt: new Date().toISOString(),
-      configurationFingerprint: fingerprint,
-      mode,
-      sessionId,
-      termId,
-      levelId,
-      selectedCourseIds,
-      inputs,
-    });
   }, [
     calculator.id,
-    draftHydrated,
+    calculator.levels,
+    calculator.sessions,
+    calculator.terms,
     fingerprint,
-    inputs,
-    levelId,
-    mode,
-    selectedCourseIds,
-    sessionId,
-    termId,
+    restoreAggregate,
+    validCourses,
   ]);
 
   useEffect(() => {
-    if (!calculate.data) return;
-    requestAnimationFrame(() =>
-      document.getElementById("calculation-result")?.focus(),
-    );
-  }, [calculate.data]);
-
-  function resetResult() {
-    if (calculate.data || calculate.error) calculate.reset();
-  }
-
-  function changeMode(nextMode: EntryMode) {
-    if (nextMode === mode) return;
-    setMode(nextMode);
-    setInputs({});
-    setErrors({});
-    resetResult();
-  }
-
-  function changeTerm(nextTermId: string) {
-    setTermId(nextTermId);
-    const eligibleIds = new Set(
-      eligibleCourses(calculator.courses, nextTermId, levelId).map(
-        (course) => course.id,
-      ),
-    );
-    setSelectedCourseIds((current) =>
-      current.filter((id) => eligibleIds.has(id)),
-    );
-    resetResult();
-  }
-
-  function changeLevel(nextLevelId: string) {
-    setLevelId(nextLevelId);
-    const eligibleIds = new Set(
-      eligibleCourses(calculator.courses, termId, nextLevelId).map(
-        (course) => course.id,
-      ),
-    );
-    setSelectedCourseIds((current) =>
-      current.filter((id) => eligibleIds.has(id)),
-    );
-    resetResult();
-  }
-
-  function toggleCourse(courseId: string) {
-    setSelectedCourseIds((current) =>
-      current.includes(courseId)
-        ? current.filter((id) => id !== courseId)
-        : [...current, courseId],
-    );
-    setErrors((current) => {
-      const next = { ...current };
-      delete next.entries;
-      delete next[`entries.${courseId}`];
-      return next;
+    if (!hydrated) return;
+    writeCalculatorDraft(calculator.id, {
+      version: 4,
+      calculatorId: calculator.id,
+      updatedAt: new Date().toISOString(),
+      configurationFingerprint: fingerprint,
+      current,
+      groups,
     });
-    resetResult();
-  }
+  }, [calculator.id, current, fingerprint, groups, hydrated]);
 
-  function updateInput(courseId: string, value: string) {
-    setInputs((current) => ({ ...current, [courseId]: value }));
-    setErrors((current) => {
-      const next = { ...current };
-      delete next.entries;
-      delete next[`entries.${courseId}`];
-      return next;
-    });
-    resetResult();
-  }
-
-  function startOver() {
-    clearCalculatorDraft(calculator.id);
-    setMode("score");
-    setSessionId("");
-    setTermId("");
-    setLevelId("");
-    setSelectedCourseIds([]);
-    setInputs({});
-    setSearch("");
+  function setContext(
+    field: "sessionId" | "levelId" | "termId",
+    value: string,
+  ) {
+    setCurrent((draft) => ({
+      ...draft,
+      [field]: value,
+      ...(field === "levelId" || field === "termId"
+        ? { inputs: {}, carryovers: [] }
+        : {}),
+    }));
     setErrors({});
-    calculate.reset();
-    requestAnimationFrame(() => formHeadingRef.current?.focus());
+    preview.reset();
+    setPreviewKey("");
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  function buildCurrentGroup() {
+    const contextErrors: Record<string, string> = {};
+    if (!current.sessionId) contextErrors.sessionId = "Select a Session.";
+    if (!current.levelId) contextErrors.levelId = "Select a Level.";
+    if (!current.termId) contextErrors.termId = "Select a Term.";
     const built = buildCalculationEntries({
-      mode,
-      selectedCourseIds,
-      inputs,
+      mode: current.mode,
+      selectedCourseIds: courses.map((course) => course.id),
+      inputs: current.inputs,
       allowedGrades: calculator.gradingScheme.bands.map((band) => band.label),
     });
-    setErrors(built.errors);
-    if (Object.keys(built.errors).length > 0) {
-      requestAnimationFrame(() => errorHeadingRef.current?.focus());
+    const carryoverBuilt = current.carryovers.length
+      ? buildCalculationEntries({
+          mode: current.mode,
+          selectedCourseIds: current.carryovers.map((item) => item.attemptId),
+          inputs: current.inputs,
+          allowedGrades: calculator.gradingScheme.bands.map(
+            (band) => band.label,
+          ),
+        })
+      : { entries: [], errors: {} };
+    const { entries: regularEntriesError, ...regularErrors } = built.errors;
+    const { entries: carryoverEntriesError, ...carryoverErrors } =
+      carryoverBuilt.errors;
+    const nextErrors = {
+      ...contextErrors,
+      ...regularErrors,
+      ...carryoverErrors,
+      ...(current.carryovers.some((carryover) => {
+        const course = validCourses.find(
+          (item) => item.id === carryover.courseId,
+        );
+        return (
+          !course ||
+          (carryover.attemptType === "CARRYOVER" &&
+            !isCarryoverEligible(
+              course,
+              current.levelId,
+              current.termId,
+              calculator.levels,
+            ))
+        );
+      })
+        ? {
+            carryovers:
+              "A selected carryover must be from a lower ordered Level in this same Term.",
+          }
+        : {}),
+      ...(!built.entries.length && !carryoverBuilt.entries.length
+        ? {
+            entries:
+              regularEntriesError ??
+              carryoverEntriesError ??
+              "Complete at least one Course.",
+          }
+        : {}),
+    };
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length) {
+      requestAnimationFrame(() => errorRef.current?.focus());
+      return null;
+    }
+    return {
+      sessionId: current.sessionId,
+      levelId: current.levelId,
+      termId: current.termId,
+      mode: current.mode,
+      entries: [
+        ...built.entries.map((entry) => ({
+          attemptId: `attempt:${currentKey}:${entry.courseId}`,
+          courseId: entry.courseId,
+          value: "score" in entry ? String(entry.score) : entry.grade,
+          attemptType: "REGULAR" as const,
+        })),
+        ...carryoverBuilt.entries.map((entry) => {
+          const carryover = current.carryovers.find(
+            (item) => item.attemptId === entry.courseId,
+          )!;
+          return {
+            ...carryover,
+            courseId: carryover.courseId,
+            value: "score" in entry ? String(entry.score) : entry.grade,
+            attemptType: carryover.attemptType,
+          };
+        }),
+      ],
+      updatedAt: new Date().toISOString(),
+    } satisfies CalculationDraftGroup;
+  }
+
+  async function calculateCurrent(event?: FormEvent) {
+    event?.preventDefault();
+    const group = buildCurrentGroup();
+    if (!group) return null;
+    try {
+      const response = await preview.mutateAsync({
+        sessionId: group.sessionId,
+        levelId: group.levelId,
+        termId: group.termId,
+        entries: entriesForGroup(group),
+      });
+      setPreviewKey(groupKey(group));
+      return { group, response };
+    } catch {
+      requestAnimationFrame(() => errorRef.current?.focus());
+      return null;
+    }
+  }
+
+  async function addCurrent() {
+    const calculated =
+      preview.data && previewKey === currentKey
+        ? { group: buildCurrentGroup(), response: preview.data }
+        : await calculateCurrent();
+    if (!calculated?.group) return;
+    const previous = groups.find(
+      (item) => groupKey(item) === groupKey(calculated.group!),
+    );
+    if (previous) {
+      const retainedAttemptIds = new Set(
+        calculated.group.entries.map((entry) => entry.attemptId),
+      );
+      const removedAttemptIds = new Set(
+        previous.entries
+          .filter((entry) => !retainedAttemptIds.has(entry.attemptId))
+          .map((entry) => entry.attemptId),
+      );
+      const dependent = groups.some(
+        (candidate) =>
+          groupKey(candidate) !== groupKey(previous) &&
+          candidate.entries.some(
+            (entry) =>
+              entry.repeatedFromId &&
+              removedAttemptIds.has(entry.repeatedFromId),
+          ),
+      );
+      if (dependent) {
+        setWorkspaceNotice(
+          "This edit removes an original attempt used by a later carryover. Remove the carryover attempt first.",
+        );
+        return;
+      }
+    }
+    setWorkspaceNotice("");
+    const next = [
+      ...groups.filter(
+        (item) => groupKey(item) !== groupKey(calculated.group!),
+      ),
+      calculated.group,
+    ];
+    setGroups(next);
+    try {
+      await aggregate.mutateAsync({ entries: next.flatMap(entriesForGroup) });
+    } catch {}
+  }
+
+  async function removeGroup(group: CalculationDraftGroup) {
+    const sourceAttemptIds = new Set(
+      group.entries.map((entry) => entry.attemptId),
+    );
+    const dependent = groups.some(
+      (candidate) =>
+        groupKey(candidate) !== groupKey(group) &&
+        candidate.entries.some(
+          (entry) =>
+            entry.repeatedFromId && sourceAttemptIds.has(entry.repeatedFromId),
+        ),
+    );
+    if (dependent) {
+      setWorkspaceNotice(
+        "This Term contains an original attempt used by a later carryover. Remove the carryover attempt first.",
+      );
       return;
     }
+    setWorkspaceNotice("");
+    const next = groups.filter((item) => groupKey(item) !== groupKey(group));
+    setGroups(next);
+    if (!next.length) aggregate.reset();
+    else
+      try {
+        await aggregate.mutateAsync({ entries: next.flatMap(entriesForGroup) });
+      } catch {}
+  }
+
+  function editGroup(group: CalculationDraftGroup) {
+    setCurrent({
+      mode: group.mode,
+      sessionId: group.sessionId,
+      levelId: group.levelId,
+      termId: group.termId,
+      inputs: Object.fromEntries(
+        group.entries.map((entry) => [
+          entry.originalLevelId ? entry.attemptId : entry.courseId,
+          entry.value,
+        ]),
+      ),
+      carryovers: group.entries
+        .filter(
+          (
+            entry,
+          ): entry is typeof entry & {
+            originalLevelId: string;
+            originalTermId: string;
+          } =>
+            Boolean(
+              entry.originalLevelId && entry.originalTermId,
+            ),
+        )
+        .map((entry) => ({
+          attemptId: entry.attemptId,
+          courseId: entry.courseId,
+          originalLevelId: entry.originalLevelId,
+          originalTermId: entry.originalTermId,
+          attemptType: "CARRYOVER",
+          repeatedFromId: entry.repeatedFromId,
+        })),
+    });
+    preview.reset();
+    setPreviewKey("");
+    setErrors({});
+    requestAnimationFrame(() => {
+      const entry = document.getElementById("current-term-entry");
+      if (typeof entry?.scrollIntoView === "function")
+        entry.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  async function recalculateGroup() {
     try {
-      await calculate.mutateAsync({
-        ...(sessionId ? { sessionId } : {}),
-        ...(termId ? { termId } : {}),
-        ...(levelId ? { levelId } : {}),
-        entries: built.entries,
-      });
-    } catch {
-      requestAnimationFrame(() => errorHeadingRef.current?.focus());
-    }
+      await aggregate.mutateAsync({ entries: groups.flatMap(entriesForGroup) });
+    } catch {}
   }
 
-  const context = [
-    calculator.sessions.find((item) => item.id === sessionId)?.name,
-    calculator.terms.find((item) => item.id === termId)?.name,
-    calculator.levels.find((item) => item.id === levelId)?.name,
-  ].filter((item): item is string => Boolean(item));
-
-  if (calculate.data) {
-    return (
-      <div>
-        <CalculationReport
-          response={calculate.data}
-          context={context}
-          onEdit={() => {
-            calculate.reset();
-            requestAnimationFrame(() => formHeadingRef.current?.focus());
-          }}
-          onStartOver={startOver}
-        />
-      </div>
-    );
+  function clearAll() {
+    clearCalculatorDraft(calculator.id);
+    setCurrent(emptyCurrent());
+    setGroups([]);
+    setErrors({});
+    setPreviewKey("");
+    setWorkspaceNotice("");
+    preview.reset();
+    aggregate.reset();
   }
 
+  function addCarryover(courseId: string) {
+    if (current.carryovers.some((item) => item.courseId === courseId)) return;
+    const course = validCourses.find((item) => item.id === courseId);
+    if (
+      !course?.levelId ||
+      !course.termId ||
+      !isCarryoverEligible(
+        course,
+        current.levelId,
+        current.termId,
+        calculator.levels,
+      )
+    ) return;
+    const attemptId = `carryover:${currentKey}:${courseId}`;
+    setCurrent((draft) => ({
+      ...draft,
+      carryovers: [
+        ...draft.carryovers,
+        {
+          attemptId,
+          courseId,
+          originalLevelId: course.levelId!,
+          originalTermId: course.termId!,
+          attemptType: "CARRYOVER",
+        },
+      ],
+    }));
+    setWorkspaceNotice("");
+    preview.reset();
+    setPreviewKey("");
+  }
+
+  function removeCarryover(attemptId: string) {
+    setCurrent((draft) => {
+      const inputs = { ...draft.inputs };
+      delete inputs[attemptId];
+      return {
+        ...draft,
+        inputs,
+        carryovers: draft.carryovers.filter(
+          (item) => item.attemptId !== attemptId,
+        ),
+      };
+    });
+    preview.reset();
+    setPreviewKey("");
+  }
+
+  const label = (kind: "session" | "level" | "term", id: string) =>
+    (kind === "session"
+      ? calculator.sessions
+      : kind === "level"
+        ? calculator.levels
+        : calculator.terms
+    ).find((item) => item.id === id)?.name ?? "Unknown";
+  const currentTotal = preview.data?.groups[0] ?? preview.data;
   return (
-    <form
-      onSubmit={(event) => void submit(event)}
-      className="border border-line bg-white p-6 md:p-8"
-    >
-      <div className="flex flex-col justify-between gap-4 border-b border-line pb-6 sm:flex-row sm:items-start">
-        <div>
-          <h2
-            ref={formHeadingRef}
-            tabIndex={-1}
-            className="font-display text-3xl font-semibold outline-none"
-          >
-            Enter your courses
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            Context is optional. Session provides context only; Term and Level
-            determine which assigned courses appear.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="focus-ring self-start text-sm font-semibold text-blue-700"
-          onClick={startOver}
-        >
-          Reset draft
-        </button>
-      </div>
-
-      <fieldset className="mt-6 grid gap-4 md:grid-cols-3">
-        <legend className="sr-only">Academic context</legend>
-        {calculator.sessions.length > 0 && (
-          <label className="text-sm font-semibold">
-            Session
-            <Select
-              value={sessionId}
-              onChange={(event) => {
-                setSessionId(event.target.value);
-                resetResult();
-              }}
-              className="mt-2 font-normal"
-            >
-              <option value="">No Session selected</option>
-              {calculator.sessions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </Select>
-          </label>
-        )}
-        {calculator.terms.length > 0 && (
-          <label className="text-sm font-semibold">
-            Term
-            <Select
-              value={termId}
-              onChange={(event) => changeTerm(event.target.value)}
-              className="mt-2 font-normal"
-            >
-              <option value="">All Terms</option>
-              {calculator.terms.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.code ? `${item.code} — ` : ""}
-                  {item.name}
-                </option>
-              ))}
-            </Select>
-          </label>
-        )}
-        {calculator.levels.length > 0 && (
-          <label className="text-sm font-semibold">
-            Level
-            <Select
-              value={levelId}
-              onChange={(event) => changeLevel(event.target.value)}
-              className="mt-2 font-normal"
-            >
-              <option value="">All Levels</option>
-              {calculator.levels.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.code ? `${item.code} — ` : ""}
-                  {item.name}
-                </option>
-              ))}
-            </Select>
-          </label>
-        )}
-      </fieldset>
-
-      <fieldset className="mt-7">
-        <legend className="text-sm font-semibold">Entry mode</legend>
-        <div className="mt-2 inline-flex border border-line bg-cream p-1">
-          {(["score", "grade"] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              aria-pressed={mode === item}
-              onClick={() => changeMode(item)}
-              className={`focus-ring min-h-10 px-5 text-sm font-semibold capitalize ${mode === item ? "bg-ink text-white" : "text-muted hover:text-ink"}`}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <div className="mt-7">
-        <label htmlFor="course-search" className="text-sm font-semibold">
-          Search eligible Courses
-        </label>
-        <Input
-          id="course-search"
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by code or name"
-          className="mt-2 max-w-xl"
-        />
-      </div>
-
-      {Object.keys(errors).length > 0 && (
-        <div className="mt-6" role="alert">
-          <h3
-            ref={errorHeadingRef}
-            tabIndex={-1}
-            className="font-semibold text-red-700 outline-none"
-          >
-            Check your entries
-          </h3>
-          {errors.entries && (
-            <p className="mt-1 text-sm text-red-700">{errors.entries}</p>
-          )}
-        </div>
-      )}
-      {calculate.isError && (
-        <div className="mt-6">
-          <h3 ref={errorHeadingRef} tabIndex={-1} className="sr-only">
-            Calculation failed
-          </h3>
-          <RequestError>
-            {normalizeApiError(calculate.error).message}
-          </RequestError>
-        </div>
-      )}
-
-      <fieldset className="mt-6">
-        <legend className="sr-only">Courses and values</legend>
-        <div className="border border-line">
-          <div className="hidden grid-cols-[minmax(0,1fr)_100px_180px] gap-4 border-b border-line bg-cream px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted sm:grid">
-            <span>Course</span>
-            <span>Units</span>
-            <span>{mode === "score" ? "Score" : "Grade"}</span>
+    <div className="grid gap-7 xl:grid-cols-[minmax(0,1.45fr)_minmax(330px,.75fr)] xl:items-start">
+      <div className="space-y-7">
+        {incompleteCount > 0 && (
+          <div className="flex gap-3 border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+            <AlertTriangle className="mt-0.5 shrink-0" size={18} />
+            <p>
+              <strong>Calculator configuration warning:</strong>{" "}
+              {incompleteCount}{" "}
+              {incompleteCount === 1 ? "Course is" : "Courses are"} unavailable
+              because the owner has not completed Level, Term, or credit units.
+            </p>
           </div>
-          {visible.map((course) => {
-            const selected = selectedCourseIds.includes(course.id);
-            const error = errors[`entries.${course.id}`];
-            return (
-              <div
-                key={course.id}
-                className="grid gap-3 border-b border-line p-4 last:border-0 sm:grid-cols-[minmax(0,1fr)_100px_180px] sm:items-center sm:gap-4"
+        )}
+        {workspaceNotice && (
+          <div
+            role="alert"
+            className="border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          >
+            {workspaceNotice}
+          </div>
+        )}
+        <form
+          onSubmit={(event) => void calculateCurrent(event)}
+          id="current-term-entry"
+          className="scroll-mt-5 border border-line bg-white p-5 sm:p-7"
+        >
+          <div className="flex flex-col justify-between gap-3 border-b border-line pb-5 sm:flex-row sm:items-start">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">
+                Current term entry
+              </p>
+              <h2 className="mt-1 font-display text-3xl font-semibold">
+                Choose one academic period
+              </h2>
+              <p className="mt-2 text-sm text-muted">
+                Calculate one manageable Term, add it, then switch context
+                without losing previous work.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="focus-ring self-start text-sm font-semibold text-red-700"
+              onClick={clearAll}
+            >
+              Clear calculation
+            </button>
+          </div>
+          <fieldset className="mt-6 grid gap-4 md:grid-cols-3">
+            <legend className="sr-only">Academic context</legend>
+            <label className="text-sm font-semibold">
+              Session *
+              <Select
+                value={current.sessionId}
+                onChange={(event) =>
+                  setContext("sessionId", event.target.value)
+                }
+                className="mt-2 font-normal"
+                aria-invalid={Boolean(errors.sessionId)}
               >
-                <label className="flex min-w-0 items-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 accent-blue-600"
-                    checked={selected}
-                    onChange={() => toggleCourse(course.id)}
-                  />
-                  <span className="min-w-0">
-                    <span className="block font-semibold">
-                      {course.code ? `${course.code} — ` : ""}
-                      {course.name}
-                    </span>
-                    <span className="mt-1 block text-xs text-muted">
-                      {[
-                        calculator.terms.find(
-                          (item) => item.id === course.termId,
-                        )?.name,
-                        calculator.levels.find(
-                          (item) => item.id === course.levelId,
-                        )?.name,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ") || "Available in any Term and Level"}
-                    </span>
-                  </span>
-                </label>
-                <div>
-                  <span className="text-xs text-muted sm:hidden">
-                    Credit units:{" "}
-                  </span>
-                  <span className="font-semibold">{course.creditUnits}</span>
+                <option value="">Select Session</option>
+                {sortedSessions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </Select>
+              <FieldError>{errors.sessionId}</FieldError>
+            </label>
+            <label className="text-sm font-semibold">
+              Level *
+              <Select
+                value={current.levelId}
+                onChange={(event) => setContext("levelId", event.target.value)}
+                className="mt-2 font-normal"
+                aria-invalid={Boolean(errors.levelId)}
+              >
+                <option value="">Select Level</option>
+                {sortedLevels.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </Select>
+              <FieldError>{errors.levelId}</FieldError>
+            </label>
+            <label className="text-sm font-semibold">
+              Term *
+              <Select
+                value={current.termId}
+                onChange={(event) => setContext("termId", event.target.value)}
+                className="mt-2 font-normal"
+                aria-invalid={Boolean(errors.termId)}
+              >
+                <option value="">Select Term</option>
+                {sortedTerms.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </Select>
+              <FieldError>{errors.termId}</FieldError>
+            </label>
+          </fieldset>
+          {contextReady && (
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                {label("session", current.sessionId)}
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">
+                {label("level", current.levelId)}
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">
+                {label("term", current.termId)}
+              </span>
+            </div>
+          )}
+          <fieldset className="mt-6">
+            <legend className="text-sm font-semibold">Input mode</legend>
+            <div className="mt-2 inline-flex border border-line bg-cream p-1">
+              {(["score", "grade"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={current.mode === mode}
+                  onClick={() => {
+                    setCurrent((draft) => ({ ...draft, mode, inputs: {} }));
+                    preview.reset();
+                    setPreviewKey("");
+                  }}
+                  className={`focus-ring min-h-10 px-5 text-sm font-semibold capitalize ${current.mode === mode ? "bg-ink text-white" : "text-muted"}`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <div className="mt-6 flex flex-col gap-2 border-y border-line py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">
+                Carryover / repeat attempts
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                Add a Course already entered at an earlier Level. Its original
+                result will remain unchanged.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={
+                !contextReady ||
+                currentLevelOrder == null ||
+                availableCarryoverGroups.length === 0
+              }
+              onClick={() => setCarryoverOpen(true)}
+            >
+              <PlusCircle size={16} /> Add Carryover Course
+            </Button>
+          </div>
+          <fieldset className="mt-6">
+            <legend className="sr-only">Courses</legend>
+            {!contextReady && (
+              <p className="border border-dashed border-line p-8 text-center text-sm text-muted">
+                Select a Session, Level, and Term to load Courses.
+              </p>
+            )}
+            {contextReady && !courses.length && !current.carryovers.length && (
+              <p className="border border-dashed border-line p-8 text-center text-sm text-muted">
+                No configured Courses are available for this Level and Term.
+              </p>
+            )}
+            {courses.length + current.carryovers.length > 0 && (
+              <div className="border border-line">
+                <div className="border-b border-line bg-cream px-4 py-3">
+                  <h3 className="font-semibold uppercase">
+                    {label("term", current.termId)}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted">
+                    {courses.length + current.carryovers.length}{" "}
+                    {courses.length + current.carryovers.length === 1
+                      ? "Course attempt"
+                      : "Course attempts"}{" "}
+                    · values are saved in this browser
+                  </p>
                 </div>
-                <div>
-                  {mode === "score" ? (
-                    <Input
-                      aria-label={`Score for ${course.name}`}
-                      aria-invalid={Boolean(error)}
-                      aria-describedby={
-                        error ? `entry-error-${course.id}` : undefined
-                      }
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="any"
-                      disabled={!selected}
-                      value={inputs[course.id] ?? ""}
-                      onChange={(event) =>
-                        updateInput(course.id, event.target.value)
-                      }
-                      placeholder="0–100"
-                    />
-                  ) : (
-                    <Select
-                      aria-label={`Grade for ${course.name}`}
-                      aria-invalid={Boolean(error)}
-                      aria-describedby={
-                        error ? `entry-error-${course.id}` : undefined
-                      }
-                      disabled={!selected}
-                      value={inputs[course.id] ?? ""}
-                      onChange={(event) =>
-                        updateInput(course.id, event.target.value)
-                      }
+                {courses.map((course) => {
+                  const error = errors[`entries.${course.id}`];
+                  return (
+                    <div
+                      key={course.id}
+                      className="grid gap-3 border-b border-line p-4 last:border-0 sm:grid-cols-[minmax(0,1fr)_80px_170px] sm:items-center"
                     >
-                      <option value="">Select grade</option>
-                      {calculator.gradingScheme.bands.map((band) => (
-                        <option key={band.label} value={band.label}>
-                          {band.label}
-                        </option>
-                      ))}
-                    </Select>
-                  )}
-                  <FieldError id={`entry-error-${course.id}`}>
-                    {error}
-                  </FieldError>
-                </div>
+                      <div className="min-w-0">
+                        <p className="break-words font-semibold">
+                          {course.code ? `${course.code} — ` : ""}
+                          {course.name}
+                        </p>
+                        <p className="mt-1 text-xs text-muted sm:hidden">
+                          {course.creditUnits} credit units
+                        </p>
+                      </div>
+                      <p className="hidden text-sm font-semibold sm:block">
+                        {course.creditUnits} units
+                      </p>
+                      <div>
+                        {current.mode === "score" ? (
+                          <Input
+                            aria-label={`Score for ${course.name}`}
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            max="100"
+                            step="any"
+                            placeholder="Score 0–100"
+                            value={current.inputs[course.id] ?? ""}
+                            aria-invalid={Boolean(error)}
+                            onChange={(event) => {
+                              setCurrent((draft) => ({
+                                ...draft,
+                                inputs: {
+                                  ...draft.inputs,
+                                  [course.id]: event.target.value,
+                                },
+                              }));
+                              preview.reset();
+                              setPreviewKey("");
+                            }}
+                          />
+                        ) : (
+                          <Select
+                            aria-label={`Grade for ${course.name}`}
+                            value={current.inputs[course.id] ?? ""}
+                            aria-invalid={Boolean(error)}
+                            onChange={(event) => {
+                              setCurrent((draft) => ({
+                                ...draft,
+                                inputs: {
+                                  ...draft.inputs,
+                                  [course.id]: event.target.value,
+                                },
+                              }));
+                              preview.reset();
+                              setPreviewKey("");
+                            }}
+                          >
+                            <option value="">Select grade</option>
+                            {calculator.gradingScheme.bands.map((band) => (
+                              <option key={band.label} value={band.label}>
+                                {band.label}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                        <FieldError>{error}</FieldError>
+                      </div>
+                    </div>
+                  );
+                })}
+                {current.carryovers.map((carryover) => {
+                  const course = validCourses.find(
+                    (item) => item.id === carryover.courseId,
+                  );
+                  if (!course) return null;
+                  const error = errors[`entries.${carryover.attemptId}`];
+                  return (
+                    <div
+                      key={carryover.attemptId}
+                      className="grid gap-3 border-b border-amber-200 bg-amber-50/60 p-4 last:border-0 sm:grid-cols-[minmax(0,1fr)_80px_170px] sm:items-center"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="break-words font-semibold">
+                            {course.code ? `${course.code} — ` : ""}
+                            {course.name}
+                          </p>
+                          {carryover.attemptType === "CARRYOVER" && (
+                            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                              Carryover
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-muted">
+                          Originally {label("level", carryover.originalLevelId)}{" "}
+                          · {label("term", carryover.originalTermId)}
+                        </p>
+                        <button
+                          type="button"
+                          className="focus-ring mt-2 text-xs font-semibold text-red-700"
+                          onClick={() => removeCarryover(carryover.attemptId)}
+                        >
+                          Remove carryover
+                        </button>
+                      </div>
+                      <p className="text-sm font-semibold">
+                        {course.creditUnits} units
+                      </p>
+                      <div>
+                        {current.mode === "score" ? (
+                          <Input
+                            aria-label={`Score for carryover ${course.name}`}
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            max="100"
+                            step="any"
+                            placeholder="New score 0–100"
+                            value={current.inputs[carryover.attemptId] ?? ""}
+                            aria-invalid={Boolean(error)}
+                            onChange={(event) => {
+                              setCurrent((draft) => ({
+                                ...draft,
+                                inputs: {
+                                  ...draft.inputs,
+                                  [carryover.attemptId]: event.target.value,
+                                },
+                              }));
+                              preview.reset();
+                              setPreviewKey("");
+                            }}
+                          />
+                        ) : (
+                          <Select
+                            aria-label={`Grade for carryover ${course.name}`}
+                            value={current.inputs[carryover.attemptId] ?? ""}
+                            aria-invalid={Boolean(error)}
+                            onChange={(event) => {
+                              setCurrent((draft) => ({
+                                ...draft,
+                                inputs: {
+                                  ...draft.inputs,
+                                  [carryover.attemptId]: event.target.value,
+                                },
+                              }));
+                              preview.reset();
+                              setPreviewKey("");
+                            }}
+                          >
+                            <option value="">Select new grade</option>
+                            {calculator.gradingScheme.bands.map((band) => (
+                              <option key={band.label} value={band.label}>
+                                {band.label}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                        <FieldError>{error}</FieldError>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            )}
+          </fieldset>
+          {(errors.entries ||
+            errors.carryovers ||
+            preview.isError ||
+            aggregate.isError) && (
+            <div className="mt-5" role="alert">
+              <h3
+                ref={errorRef}
+                tabIndex={-1}
+                className="font-semibold text-red-700 outline-none"
+              >
+                Check this Term
+              </h3>
+              {errors.entries && (
+                <p className="mt-1 text-sm text-red-700">{errors.entries}</p>
+              )}
+              {errors.carryovers && (
+                <p className="mt-1 text-sm text-red-700">{errors.carryovers}</p>
+              )}
+              <RequestError>
+                {preview.isError
+                  ? normalizeApiError(preview.error).message
+                  : aggregate.isError
+                    ? normalizeApiError(aggregate.error).message
+                    : undefined}
+              </RequestError>
+            </div>
+          )}
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Button
+              type="submit"
+              disabled={
+                preview.isPending ||
+                courses.length + current.carryovers.length === 0
+              }
+            >
+              <Calculator size={17} />
+              {preview.isPending ? "Calculating…" : "Calculate this Term"}
+            </Button>
+            {preview.data && previewKey === currentKey && (
+              <Button
+                type="button"
+                onClick={() => void addCurrent()}
+                disabled={aggregate.isPending}
+              >
+                <Check size={17} />
+                {groups.some((group) => groupKey(group) === currentKey)
+                  ? "Update calculation"
+                  : "Add to calculation"}
+              </Button>
+            )}
+          </div>
+          {preview.data && previewKey === currentKey && (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border border-emerald-300 bg-emerald-50 p-4">
+              <div>
+                <p className="text-xs font-semibold uppercase text-emerald-800">
+                  Current Term GPA
+                </p>
+                <p className="mt-1 font-display text-3xl font-semibold text-emerald-950">
+                  {currentTotal?.gpa ?? "—"}
+                </p>
+              </div>
+              <p className="text-xs text-emerald-900">
+                Calculated by the AureScore backend. Add this Term to include it
+                in CGPA.
+              </p>
+            </div>
+          )}
+        </form>
+        {aggregate.data && groups.length > 0 && (
+          <Breakdown
+            response={aggregate.data}
+            calculator={calculator}
+          />
+        )}
+      </div>
+      <aside
+        className="border border-line bg-white p-5 xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7.25rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain"
+        aria-labelledby="my-calculation-heading"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">
+              My calculation
+            </p>
+            <h2
+              id="my-calculation-heading"
+              className="mt-1 font-display text-2xl font-semibold"
+            >
+              Saved working groups
+            </h2>
+          </div>
+          <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-white">
+            {groups.length}
+          </span>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-muted">
+          Private to this browser. Raw entries are restored after refresh;
+          results are recalculated by the backend.
+        </p>
+        {!groups.length && (
+          <p className="mt-5 border border-dashed border-line p-6 text-center text-sm text-muted">
+            Calculate and add your first Term.
+          </p>
+        )}
+        <div className="mt-5 space-y-3">
+          {groups.map((group) => {
+            const total = resultGroup(aggregate.data, group);
+            return (
+              <article
+                key={groupKey(group)}
+                className={`border p-4 ${groupKey(group) === currentKey ? "border-blue-400 bg-blue-50/50" : "border-line"}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">
+                      {label("session", group.sessionId)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
+                      {label("level", group.levelId)} ·{" "}
+                      {label("term", group.termId)}
+                    </p>
+                    {group.entries.some(
+                      (entry) => entry.attemptType === "CARRYOVER",
+                    ) && (
+                      <p className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                        {
+                          group.entries.filter(
+                            (entry) => entry.attemptType === "CARRYOVER",
+                          ).length
+                        }{" "}
+                        {group.entries.filter(
+                          (entry) => entry.attemptType === "CARRYOVER",
+                        ).length === 1
+                          ? "carryover"
+                          : "carryovers"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase text-muted">
+                      GPA
+                    </p>
+                    <p className="font-display text-2xl font-semibold">
+                      {total?.gpa ?? (aggregate.isPending ? "…" : "—")}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    className="focus-ring inline-flex min-h-9 items-center gap-1.5 border border-line bg-white px-3 text-xs font-semibold"
+                    onClick={() => editGroup(group)}
+                  >
+                    <Pencil size={13} /> Edit
+                  </button>
+                  <button
+                    className="focus-ring inline-flex min-h-9 items-center gap-1.5 border border-line bg-white px-3 text-xs font-semibold"
+                    onClick={() => void recalculateGroup()}
+                    disabled={aggregate.isPending}
+                  >
+                    <RefreshCw size={13} /> Recalculate
+                  </button>
+                  <button
+                    className="focus-ring inline-flex min-h-9 items-center gap-1.5 border border-red-200 bg-white px-3 text-xs font-semibold text-red-700"
+                    onClick={() => void removeGroup(group)}
+                  >
+                    <Trash2 size={13} /> Remove
+                  </button>
+                </div>
+              </article>
             );
           })}
-          {visible.length === 0 && (
-            <p className="p-8 text-center text-sm text-muted">
-              No Courses match this context and search.
+        </div>
+        {groups.length > 0 && (
+          <div className="mt-5 bg-ink p-5 text-white">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-200">
+              Current CGPA
+            </p>
+            <p className="mt-1 font-display text-4xl font-semibold">
+              {aggregate.data?.cgpa ??
+                aggregate.data?.gpa ??
+                (aggregate.isPending ? "…" : "—")}
+            </p>
+            {aggregate.isError && (
+              <p className="mt-2 text-xs text-red-200">
+                {normalizeApiError(aggregate.error).message}
+              </p>
+            )}
+          </div>
+        )}
+      </aside>
+      <Dialog
+        open={carryoverOpen}
+        onClose={() => setCarryoverOpen(false)}
+        title="Add Carryover Course"
+        description="Only Courses from a lower ordered Level in the selected Term are available. Existing attempts are not changed."
+        className="max-w-3xl!"
+      >
+        {currentLevelOrder == null && (
+          <p className="border border-dashed border-line p-6 text-center text-sm text-muted">
+            Carryover is unavailable because the selected Level has no order.
+          </p>
+        )}
+        {currentLevelOrder != null &&
+          availableCarryoverGroups.length === 0 && (
+            <p className="border border-dashed border-line p-6 text-center text-sm text-muted">
+              No eligible lower-Level Courses remain for this Term, or all of
+              them have already been selected.
             </p>
           )}
+        <div className="max-h-[60vh] space-y-6 overflow-y-auto pr-1">
+          {availableCarryoverGroups.map(({ level, terms }) => (
+            <section key={level.id} aria-labelledby={`carry-level-${level.id}`}>
+              <h3
+                id={`carry-level-${level.id}`}
+                className="sticky top-0 border-b border-line bg-white py-2 font-display text-xl font-semibold uppercase"
+              >
+                {level.name}
+              </h3>
+              <div className="mt-3 space-y-4">
+                {terms.map(({ term, courses: availableCourses }) => (
+                  <section key={term.id}>
+                    <h4 className="text-xs font-bold uppercase tracking-[0.12em] text-blue-700">
+                      {term.name}
+                    </h4>
+                    <ul className="mt-2 divide-y divide-line border border-line">
+                      {availableCourses.map((course) => (
+                        <li
+                          key={course.id}
+                          className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center"
+                        >
+                          <div className="min-w-0">
+                            <p className="break-words font-semibold">
+                              {course.code ? `${course.code} — ` : ""}
+                              {course.name}
+                            </p>
+                            <p className="mt-1 text-xs text-muted">
+                              {course.creditUnits} credit units · Originally{" "}
+                              {level.name}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="shrink-0"
+                            onClick={() => addCarryover(course.id)}
+                          >
+                            <PlusCircle size={15} /> Add repeat
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
-      </fieldset>
-
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Button
-          type="submit"
-          disabled={calculate.isPending || eligible.length === 0}
-        >
-          <Calculator size={17} aria-hidden="true" />{" "}
-          {calculate.isPending ? "Calculating…" : "Calculate GPA"}
-        </Button>
-        <p aria-live="polite" className="text-sm text-muted">
-          {selectedCourseIds.length} Course
-          {selectedCourseIds.length === 1 ? "" : "s"} selected
-        </p>
-      </div>
-    </form>
+        <div className="mt-5 flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCarryoverOpen(false)}
+          >
+            Done
+          </Button>
+        </div>
+      </Dialog>
+    </div>
   );
 }
 
@@ -797,8 +1508,7 @@ export default function PublicCalculatorPage({
   calculatorId: string;
 }) {
   const query = usePublicCalculator(calculatorId);
-
-  if (query.isPending) {
+  if (query.isPending)
     return (
       <main className="min-h-screen bg-cream text-ink">
         <SiteHeader />
@@ -812,8 +1522,6 @@ export default function PublicCalculatorPage({
         <Footer />
       </main>
     );
-  }
-
   if (query.isError) {
     const error = normalizeApiError(query.error);
     const notFound = error.status === 404;
@@ -847,18 +1555,17 @@ export default function PublicCalculatorPage({
       </main>
     );
   }
-
   const calculator = query.data;
   return (
     <main className="min-h-screen bg-cream text-ink">
       <SiteHeader />
       <section className="border-b border-line bg-white">
-        <div className="mx-auto max-w-6xl px-6 py-12 md:px-10 md:py-16">
+        <div className="mx-auto max-w-[1400px] px-6 py-10 md:px-10 md:py-14">
           <Link
             href="/public-calculators"
             className="focus-ring inline-flex items-center gap-2 text-sm font-semibold text-blue-700"
           >
-            <ArrowLeft size={15} aria-hidden="true" /> All public calculators
+            <ArrowLeft size={15} /> All public calculators
           </Link>
           <h1 className="mt-6 max-w-4xl font-display text-4xl font-semibold leading-tight md:text-6xl">
             {calculator.title}
@@ -875,8 +1582,8 @@ export default function PublicCalculatorPage({
           )}
         </div>
       </section>
-      <section className="mx-auto max-w-6xl px-6 py-10 md:px-10 md:py-14">
-        <CalculatorForm calculator={calculator} />
+      <section className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 md:px-10 md:py-12">
+        <CalculatorWorkspace calculator={calculator} />
       </section>
       <Footer />
     </main>

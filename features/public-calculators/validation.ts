@@ -117,8 +117,8 @@ export function normalizeCourse(values: {
   return {
     name: values.name.trim(),
     code: optional(values.code),
-    levelId: optional(values.levelId),
-    termId: optional(values.termId),
+    levelId: values.levelId.trim(),
+    termId: values.termId.trim(),
     creditUnits: Number(values.creditUnits),
     order: optionalOrder(values.order),
     ...(metadata.error ? {} : { metadata: metadata.value }),
@@ -134,6 +134,10 @@ export function validateCourse(
     errors["course.name"] = "Name must be between 1 and 120 characters.";
   if ((input.code?.length ?? 0) > 30)
     errors["course.code"] = "Code must be at most 30 characters.";
+  if (!input.levelId)
+    errors["course.levelId"] = "Select the Level for this Course.";
+  if (!input.termId)
+    errors["course.termId"] = "Select the Term for this Course.";
   if (!Number.isFinite(input.creditUnits) || input.creditUnits <= 0)
     errors["course.creditUnits"] = "Credit units must be greater than zero.";
   if (
@@ -220,8 +224,10 @@ export function eligibleCourses(
 ) {
   return courses.filter(
     (course) =>
-      (!termId || course.termId === null || course.termId === termId) &&
-      (!levelId || course.levelId === null || course.levelId === levelId),
+      Boolean(course.levelId && course.termId) &&
+      Number(course.creditUnits) > 0 &&
+      (!termId || course.termId === termId) &&
+      (!levelId || course.levelId === levelId),
   );
 }
 

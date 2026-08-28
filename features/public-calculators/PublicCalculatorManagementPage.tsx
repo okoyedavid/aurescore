@@ -26,6 +26,7 @@ import {
   type CalculatorFieldErrors,
   type GradingBandDraft,
 } from "./validation";
+import { missingCourseFields } from "./hierarchy";
 
 const tabs = [
   "overview",
@@ -212,11 +213,22 @@ function PublishPanel({ calculator }: { calculator: CreatorCalculatorDetail }) {
       ready: Boolean(calculator.gradingScheme),
     },
     { label: "At least one Course", ready: calculator.courses.length > 0 },
+    { label: "At least one Session", ready: calculator.sessions.length > 0 },
+    { label: "At least one Level", ready: calculator.levels.length > 0 },
+    { label: "At least one Term", ready: calculator.terms.length > 0 },
     {
       label: "Every Course has positive credit units",
       ready:
         calculator.courses.length > 0 &&
         calculator.courses.every((course) => Number(course.creditUnits) > 0),
+    },
+    {
+      label: "Every Course has a Level and Term",
+      ready:
+        calculator.courses.length > 0 &&
+        calculator.courses.every(
+          (course) => !missingCourseFields(course).length,
+        ),
     },
   ];
   const publication = calculator.isPublished
@@ -298,7 +310,11 @@ function PublishPanel({ calculator }: { calculator: CreatorCalculatorDetail }) {
           )}
           <div className="mt-5 flex flex-wrap gap-2">
             <Button
-              disabled={publication.isPending}
+              disabled={
+                publication.isPending ||
+                (!calculator.isPublished &&
+                  checks.some((check) => !check.ready))
+              }
               onClick={() => void toggle()}
             >
               {publication.isPending

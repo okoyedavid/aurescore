@@ -235,13 +235,13 @@ describe("public calculator contracts", () => {
     ).toMatch(/scheme/i);
   });
 
-  it("filters by Term and Level while including unassigned Courses", () => {
+  it("filters by Term and Level while excluding incomplete legacy Courses", () => {
     expect(
       eligibleCourses(detail.courses, "term_1", "level_1").map(
         (course) => course.id,
       ),
-    ).toEqual(["course_1", "course_2"]);
-    expect(eligibleCourses(detail.courses, "", "")).toHaveLength(3);
+    ).toEqual(["course_1"]);
+    expect(eligibleCourses(detail.courses, "", "")).toHaveLength(2);
   });
 
   it("validates an editable grading scheme without hard-coded labels", () => {
@@ -272,19 +272,23 @@ describe("public calculator contracts", () => {
   it("namespaces drafts, preserves raw inputs, and discards incompatible configuration", () => {
     const fingerprint = configurationFingerprint(detail);
     writeCalculatorDraft(detail.id, {
-      version: 1,
+      version: 4,
+      calculatorId: detail.id,
       updatedAt: "now",
       configurationFingerprint: fingerprint,
-      mode: "score",
-      sessionId: "session_1",
-      termId: "term_1",
-      levelId: "level_1",
-      selectedCourseIds: ["course_1"],
-      inputs: { course_1: "0" },
+      current: {
+        mode: "score",
+        sessionId: "session_1",
+        termId: "term_1",
+        levelId: "level_1",
+        inputs: { course_1: "0" },
+        carryovers: [],
+      },
+      groups: [],
     });
-    expect(readCalculatorDraft(detail.id, fingerprint)?.inputs.course_1).toBe(
-      "0",
-    );
+    expect(
+      readCalculatorDraft(detail.id, fingerprint)?.current.inputs.course_1,
+    ).toBe("0");
     expect(readCalculatorDraft(detail.id, "changed")).toBeNull();
     expect(localStorage.getItem(calculatorDraftKey(detail.id))).toBeNull();
     clearCalculatorDraft(detail.id);
